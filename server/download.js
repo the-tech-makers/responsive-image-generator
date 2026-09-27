@@ -1,6 +1,7 @@
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { join } from 'node:path';
+import { touchSession } from './session.js';
 
 function validSessionId(value) {
   return typeof value === 'string' && /^[0-9a-f-]{36}$/.test(value);
@@ -32,6 +33,7 @@ export async function handleDownload(req, res, { storageDir }) {
 
   try {
     const fileStat = await stat(filePath);
+    await touchSession(storageDir, sessionId);
     res.writeHead(200, {
       'Content-Type': 'application/octet-stream',
       'Content-Length': fileStat.size,
