@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { extname, basename, join } from 'node:path';
 import { rm } from 'node:fs/promises';
 import sharp from 'sharp';
-import { touchSession } from './session.js';
+import { createSession, touchSession, writeSessionManifest } from './session.js';
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
 const MAX_REQUEST_SIZE = 250 * 1024 * 1024;
@@ -44,6 +44,7 @@ export async function handleUpload(req, res, { storageDir }) {
   const sessionId = randomUUID();
   const sessionRoot = join(storageDir, 'sessions', sessionId);
   const uploadDir = join(sessionRoot, 'uploads');
+  await createSession(storageDir, sessionId);
   mkdirSync(uploadDir, { recursive: true });
 
   const files = [];
@@ -149,6 +150,7 @@ export async function handleUpload(req, res, { storageDir }) {
         return;
       }
 
+      await writeSessionManifest(storageDir, sessionId, files);
       await touchSession(storageDir, sessionId);
       json(res, 201, { sessionId, files });
     } catch (error) {
