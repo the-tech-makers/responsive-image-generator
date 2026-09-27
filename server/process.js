@@ -26,10 +26,23 @@ function validSessionId(value) {
   return typeof value === 'string' && /^[0-9a-f-]{36}$/.test(value);
 }
 
+function safeId(value) {
+  return typeof value === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(value);
+}
+
+function normalizeWidths(widths) {
+  if (!Array.isArray(widths)) return DEFAULT_WIDTHS;
+  return [...new Set(
+    widths
+      .map(Number)
+      .filter((width) => Number.isInteger(width) && width > 0 && width <= 10000),
+  )].sort((a, b) => a - b);
+}
+
 export async function handleProcess(req, res, { storageDir }) {
   try {
     const payload = await readJson(req);
-    const { sessionId, files, widths = DEFAULT_WIDTHS, formats = DEFAULT_FORMATS } = payload;
+    const { sessionId, files, formats = DEFAULT_FORMATS } = payload;
 
     if (!validSessionId(sessionId) || !Array.isArray(files) || !files.length) {
       send(res, 400, { error: 'A valid session and at least one image are required.' });
@@ -37,29 +50,37 @@ export async function handleProcess(req, res, { storageDir }) {
     }
 
     const safeFormats = formats.filter((format) => ['webp', 'avif', 'jpeg', 'png'].includes(format));
-    if (!safeFormats.length) {
-      send(res, 400, { error: 'Select at least one valid output format.' });
+    const safeWidths = normalizeWidths(payload.widths);
+
+    if (!safeFormats.length || !safeWidths.length) {
+      send(res, 400, { error: 'Select at least one valid width and output format.' });
       return;
     }
 
-    const outputRoot = join(storageDir, 'sessions', sessionId, 'output');
     const sessionRoot = join(storageDir, 'sessions', sessionId);
+    const outputRoot = join(sessionRoot, 'output');
     const results = [];
 
     for (const file of files) {
-      if (typeof file.filename !== 'string' || file.filename.includes('..') || file.filename.includes('/') || file.filename.includes('\\')) {
+      if (
+        typeof file.filename !== 'string' ||
+        file.filename.includes('..') ||
+        file.filename.includes('/') ||
+        file.filename.includes('\\') ||
+        !safeId(file.id)
+      ) {
         send(res, 400, { error: 'Invalid source file.' });
         return;
       }
 
       const sourcePath = join(sessionRoot, 'uploads', file.filename);
-      const outputDir = join(outputRoot, file.id || file.filename.replace(/[^a-zA-Z0-9_-]/g, '-'));
+      const outputDir = join(outputRoot, file.id);
       await mkdir(outputDir, { recursive: true });
 
       const processed = await processImage({
         sourcePath,
         outputDir,
-        widths,
+        widths: safeWidths,
         formats: safeFormats,
         quality: Math.min(100, Math.max(1, Number(payload.quality) || 80)),
         lossless: Boolean(payload.lossless),
@@ -72,7 +93,16 @@ export async function handleProcess(req, res, { storageDir }) {
         originalName: file.originalName,
         sourceWidth: processed.sourceWidth,
         sourceHeight: processed.sourceHeight,
-        results: processed.results,
+        results: processed.results.map((item) => ({
+          filename: item.filename,
+          width: item.width,
+          height: item.height,
+          format: item.format,
+          mime: item.mime,
+          size: item.size,
+          sourceSize: item.sourceSize,
+          downloadUrl: `/api/download?sessionId=${encodeURIComponent(sessionId)}&fileId=${encodeURIComponent(file.id)}&filename=${encodeURIComponent(item.filename)}`,
+        })),
       });
     }
 
