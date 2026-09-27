@@ -2,7 +2,6 @@ import { handleUpload } from './upload.js';
 import { handleProcess } from './process.js';
 import { handleDownload } from './download.js';
 import { handleZip } from './zip.js';
-import { touchSession } from './session.js';
 
 function sendJson(res, status, payload) {
   res.writeHead(status, {
@@ -32,15 +31,11 @@ export async function handleApiRequest(req, res, context) {
   }
 
   if (req.method === 'GET' && path === '/api/download') {
-    const sessionId = url.searchParams.get('sessionId');
-    await touchSession(context.storageDir, sessionId);
     await handleDownload(req, res, context);
     return;
   }
 
   if (req.method === 'GET' && path === '/api/download-all') {
-    const sessionId = url.searchParams.get('sessionId');
-    await touchSession(context.storageDir, sessionId);
     await handleZip(req, res, context);
     return;
   }
