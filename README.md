@@ -47,7 +47,9 @@ The project source of truth is in `docs/`:
 
 The application is designed for Node.js 20 hosting, including supported cPanel Node.js environments.
 
-The production startup entry is `app.js`.
+The production startup entry is `app.js`. Run `npm run build` before starting production so the native Node server can serve the Vite output from `dist/`.
+
+ZIP downloads currently use the host system's `zip` command. Verify that the cPanel server provides `zip` before enabling the Download ZIP feature in production.
 
 ## Scope
 
