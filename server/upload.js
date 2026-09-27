@@ -3,6 +3,7 @@ import { createWriteStream, mkdirSync, statSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { extname, basename, join } from 'node:path';
 import sharp from 'sharp';
+import { touchSession } from './session.js';
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
 const MAX_REQUEST_SIZE = 250 * 1024 * 1024;
@@ -51,11 +52,7 @@ export async function handleUpload(req, res, { storageDir }) {
 
   const busboy = Busboy({
     headers: req.headers,
-    limits: {
-      files: 50,
-      fileSize: MAX_FILE_SIZE,
-      parts: 60,
-    },
+    limits: { files: 50, fileSize: MAX_FILE_SIZE, parts: 60 },
   });
 
   busboy.on('file', (fieldName, file, info) => {
@@ -65,7 +62,6 @@ export async function handleUpload(req, res, { storageDir }) {
     }
 
     const extension = extname(info.filename).toLowerCase();
-
     if (!ALLOWED_EXTENSIONS.has(extension)) {
       rejected = `Unsupported file type: ${info.filename}`;
       file.resume();
@@ -82,49 +78,37 @@ export async function handleUpload(req, res, { storageDir }) {
       file.on('data', (chunk) => {
         fileBytes += chunk.length;
         requestBytes += chunk.length;
-
         if (requestBytes > MAX_REQUEST_SIZE) {
           rejected = 'Upload request is too large.';
           file.destroy(new Error(rejected));
         }
       });
 
-      file.on('limit', () => {
-        reject(new Error(`File exceeds 25 MB: ${info.filename}`));
-      });
-
+      file.on('limit', () => reject(new Error(`File exceeds 25 MB: ${info.filename}`)));
       file.on('error', reject);
       output.on('error', reject);
       output.on('finish', resolve);
-
       file.pipe(output);
 
-      pending.push(
-        writePromise.then(async () => {
-          if (!fileBytes) {
-            throw new Error(`Empty file: ${info.filename}`);
-          }
+      pending.push(writePromise.then(async () => {
+        if (!fileBytes) throw new Error(`Empty file: ${info.filename}`);
+        const metadata = await sharp(path).metadata();
 
-          const metadata = await sharp(path).metadata();
-
-          files.push({
-            id: randomUUID(),
-            originalName: info.filename,
-            filename,
-            width: metadata.width || 0,
-            height: metadata.height || 0,
-            size: statSync(path).size,
-            format: metadata.format || null,
-            sessionId,
-          });
-        }),
-      );
+        files.push({
+          id: randomUUID(),
+          originalName: info.filename,
+          filename,
+          width: metadata.width || 0,
+          height: metadata.height || 0,
+          size: statSync(path).size,
+          format: metadata.format || null,
+          sessionId,
+        });
+      }));
     });
   });
 
-  busboy.on('error', (error) => {
-    rejected = error.message;
-  });
+  busboy.on('error', (error) => { rejected = error.message; });
 
   busboy.on('finish', async () => {
     try {
@@ -140,6 +124,7 @@ export async function handleUpload(req, res, { storageDir }) {
         return;
       }
 
+      await touchSession(storageDir, sessionId);
       json(res, 201, { sessionId, files });
     } catch (error) {
       console.error(error);
