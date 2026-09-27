@@ -10,18 +10,15 @@ function sessionPath(storageDir, sessionId) {
 export async function touchSession(storageDir, sessionId) {
   const root = sessionPath(storageDir, sessionId);
   await mkdir(root, { recursive: true });
+  const path = join(root, 'session.json');
+  const current = await readSession(storageDir, sessionId);
   const now = new Date().toISOString();
-  await writeFile(join(root, 'session.json'), JSON.stringify({
+
+  await writeFile(path, JSON.stringify({
     sessionId,
-    createdAt: now,
+    createdAt: current?.createdAt || now,
     lastActivityAt: now,
-  }), 'utf8').catch(async () => {
-    const current = await readSession(storageDir, sessionId);
-    await writeFile(join(root, 'session.json'), JSON.stringify({
-      ...current,
-      lastActivityAt: now,
-    }), 'utf8');
-  });
+  }), 'utf8');
 }
 
 export async function readSession(storageDir, sessionId) {
@@ -40,7 +37,7 @@ export async function cleanupSessions(storageDir) {
   let removed = 0;
 
   for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
+    if (!entry.isDirectory() || !/^[0-9a-f-]{36}$/.test(entry.name)) continue;
     const root = join(sessionsRoot, entry.name);
     const session = await readSession(storageDir, entry.name);
     const lastActivity = session?.lastActivityAt
