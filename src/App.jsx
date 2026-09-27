@@ -40,6 +40,7 @@ export default function App() {
     fetchpriority: 'auto',
   });
   const [copied, setCopied] = useState('');
+  const [zipping, setZipping] = useState(false);
   const [error, setError] = useState('');
 
   async function upload(selected) {
@@ -125,6 +126,26 @@ export default function App() {
     await navigator.clipboard.writeText(file.html);
     setCopied(file.id);
     window.setTimeout(() => setCopied(''), 1500);
+  }
+
+  async function downloadAll() {
+    if (!sessionId || zipping) return;
+    setZipping(true);
+    try {
+      const response = await fetch(`/api/download-all?sessionId=${encodeURIComponent(sessionId)}`);
+      if (!response.ok) throw new Error('ZIP download is unavailable.');
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'responsive-images.zip';
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (zipError) {
+      setError(zipError.message);
+    } finally {
+      setZipping(false);
+    }
   }
 
   function updateHtmlOption(name, value) {
@@ -226,7 +247,13 @@ export default function App() {
             </div>
 
             <div className="rounded-lg border border-slate-200 bg-white p-5">
-              <h2 className="text-sm font-semibold text-slate-900">Results</h2>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-sm font-semibold text-slate-900">Results</h2>
+                  <p className="mt-1 text-xs text-slate-500">Download generated variants individually or as one ZIP.</p>
+                </div>
+                {results.length > 0 && <button type="button" onClick={downloadAll} disabled={zipping} className="shrink-0 rounded-md border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50">{zipping ? 'Preparing…' : 'Download ZIP'}</button>}
+              </div>
               {!results.length ? (
                 <p className="mt-2 text-sm text-slate-500">Processed variants will appear here.</p>
               ) : (
