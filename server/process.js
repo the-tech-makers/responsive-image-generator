@@ -1,8 +1,7 @@
-import { mkdir } from 'node:fs/promises';
-import { access } from 'node:fs/promises';
+import { access, rm, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { processImage } from './image-processor.js';
-import { touchSession } from './session.js';
+import { readSession, readSessionManifest, touchSession } from './session.js';
 
 const DEFAULT_WIDTHS = [480, 768, 1024, 1280, 1440, 1920];
 const DEFAULT_FORMATS = ['webp'];
@@ -48,6 +47,17 @@ export async function handleProcess(req, res, { storageDir }) {
       return;
     }
 
+    if (!await readSession(storageDir, sessionId)) {
+      send(res, 404, { error: 'Session not found or expired.' });
+      return;
+    }
+
+    const manifest = await readSessionManifest(storageDir, sessionId);
+    if (!manifest?.files?.length) {
+      send(res, 404, { error: 'Session upload manifest not found.' });
+      return;
+    }
+
     const safeFormats = formats.filter((format) => ['webp', 'avif', 'jpeg', 'png'].includes(format));
     const safeWidths = normalizeWidths(payload.widths);
 
@@ -75,9 +85,16 @@ export async function handleProcess(req, res, { storageDir }) {
         return;
       }
 
-      const sourcePath = join(uploadRoot, file.filename);
+      const manifestFile = manifest.files.find((item) => item.id === file.id);
+      if (!manifestFile || manifestFile.filename !== file.filename) {
+        send(res, 403, { error: 'Source file does not belong to this session.' });
+        return;
+      }
+
+      const sourcePath = join(uploadRoot, manifestFile.filename);
       await access(sourcePath);
       const outputDir = join(outputRoot, file.id);
+      await rm(outputDir, { recursive: true, force: true });
       await mkdir(outputDir, { recursive: true });
 
       const processed = await processImage({
@@ -93,7 +110,7 @@ export async function handleProcess(req, res, { storageDir }) {
 
       results.push({
         id: file.id,
-        originalName: file.originalName,
+        originalName: manifestFile.originalName,
         sourceWidth: processed.sourceWidth,
         sourceHeight: processed.sourceHeight,
         results: processed.results.map((item) => ({
