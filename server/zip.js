@@ -1,4 +1,4 @@
-import { createWriteStream } from 'node:fs';
+import { createReadStream } from 'node:fs';
 import { mkdir, readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { spawn } from 'node:child_process';
@@ -53,8 +53,6 @@ export async function handleZip(req, res, { storageDir }) {
       'Cache-Control': 'no-store',
       'X-Content-Type-Options': 'nosniff',
     });
-    createWriteStream(zipPath).on('error', () => {}).end();
-    const { createReadStream } = await import('node:fs');
     createReadStream(zipPath).pipe(res);
   } catch (error) {
     res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
