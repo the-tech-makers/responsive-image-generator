@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
+import { generateImageHtml } from './html-generator.js';
 
 const DEFAULT_WIDTHS = [480, 768, 1024, 1280, 1440, 1920];
 const FORMATS = [
@@ -30,6 +31,15 @@ export default function App() {
   const [uploading, setUploading] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [results, setResults] = useState([]);
+  const [alts, setAlts] = useState({});
+  const [htmlOptions, setHtmlOptions] = useState({
+    element: 'picture',
+    sizes: '100vw',
+    loading: 'lazy',
+    decoding: 'async',
+    fetchpriority: 'auto',
+  });
+  const [copied, setCopied] = useState('');
   const [error, setError] = useState('');
 
   async function upload(selected) {
@@ -58,20 +68,14 @@ export default function App() {
     if (!sessionId || !files.length || !formats.length || processing) return;
     setError('');
     setProcessing(true);
+    setResults([]);
 
     try {
       const response = await fetch('/api/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sessionId,
-          files,
-          widths,
-          formats,
-          quality,
-          lossless,
-          stripMetadata,
-          noUpscale,
+          sessionId, files, widths, formats, quality, lossless, stripMetadata, noUpscale,
         }),
       });
       const data = await response.json();
@@ -107,6 +111,24 @@ export default function App() {
     event.preventDefault();
     setDragging(false);
     upload(Array.from(event.dataTransfer.files || []));
+  }
+
+  const generatedHtml = useMemo(
+    () => results.map((file) => ({
+      ...file,
+      html: generateImageHtml(file, { ...htmlOptions, alt: alts[file.id] || '' }),
+    })),
+    [results, htmlOptions, alts],
+  );
+
+  async function copyHtml(file) {
+    await navigator.clipboard.writeText(file.html);
+    setCopied(file.id);
+    window.setTimeout(() => setCopied(''), 1500);
+  }
+
+  function updateHtmlOption(name, value) {
+    setHtmlOptions((current) => ({ ...current, [name]: value }));
   }
 
   return (
@@ -216,7 +238,7 @@ export default function App() {
                         {file.results.map((item) => (
                           <div key={item.filename} className="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-3 py-2 text-xs">
                             <span>{item.width}w · {item.format.toUpperCase()}</span>
-                            <span className="text-slate-500">{formatBytes(item.size)}</span>
+                            <a href={item.downloadUrl} className="font-medium text-primary hover:text-primary-hover" download>Download · {formatBytes(item.size)}</a>
                           </div>
                         ))}
                       </div>
@@ -224,6 +246,83 @@ export default function App() {
                   ))}
                 </div>
               )}
+            </div>
+          </section>
+        )}
+
+        {results.length > 0 && (
+          <section className="mt-6 rounded-lg border border-slate-200 bg-white p-5">
+            <div className="border-b border-slate-200 pb-4">
+              <h2 className="text-sm font-semibold text-slate-900">HTML Generator</h2>
+              <p className="mt-1 text-xs text-slate-500">Generate production-ready responsive markup from the variants that were actually created.</p>
+            </div>
+
+            <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+              <label className="text-sm">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Element</span>
+                <select value={htmlOptions.element} onChange={(event) => updateHtmlOption('element', event.target.value)} className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
+                  <option value="picture">&lt;picture&gt;</option>
+                  <option value="img">&lt;img&gt;</option>
+                </select>
+              </label>
+              <label className="text-sm lg:col-span-2">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Sizes</span>
+                <input value={htmlOptions.sizes} onChange={(event) => updateHtmlOption('sizes', event.target.value)} className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+              </label>
+              <label className="text-sm">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Loading</span>
+                <select value={htmlOptions.loading} onChange={(event) => updateHtmlOption('loading', event.target.value)} className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
+                  <option value="lazy">lazy</option>
+                  <option value="eager">eager</option>
+                </select>
+              </label>
+              <label className="text-sm">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Fetch priority</span>
+                <select value={htmlOptions.fetchpriority} onChange={(event) => updateHtmlOption('fetchpriority', event.target.value)} className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
+                  <option value="auto">auto</option>
+                  <option value="high">high</option>
+                  <option value="low">low</option>
+                </select>
+              </label>
+            </div>
+
+            <label className="mt-4 block text-sm">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Decoding</span>
+              <select value={htmlOptions.decoding} onChange={(event) => updateHtmlOption('decoding', event.target.value)} className="mt-2 w-full max-w-xs rounded-md border border-slate-300 px-3 py-2 text-sm">
+                <option value="async">async</option>
+                <option value="sync">sync</option>
+                <option value="auto">auto</option>
+              </select>
+            </label>
+
+            <div className="mt-6 space-y-5">
+              {generatedHtml.map((file) => (
+                <div key={file.id} className="rounded-md border border-slate-200">
+                  <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-slate-900">{file.originalName}</p>
+                      <p className="text-xs text-slate-500">{file.results.length} generated variant{file.results.length === 1 ? '' : 's'}</p>
+                    </div>
+                    <label className="flex items-center gap-2 text-xs text-slate-600">
+                      Alt
+                      <input
+                        value={alts[file.id] || ''}
+                        onChange={(event) => setAlts((current) => ({ ...current, [file.id]: event.target.value }))}
+                        placeholder="Describe the image"
+                        className="w-full min-w-48 rounded-md border border-slate-300 px-3 py-2 text-sm"
+                      />
+                    </label>
+                  </div>
+                  <div className="p-4">
+                    <pre className="max-h-72 overflow-auto rounded-md bg-slate-950 p-4 text-xs leading-5 text-slate-100"><code>{file.html}</code></pre>
+                    <div className="mt-3 flex justify-end">
+                      <button type="button" onClick={() => copyHtml(file)} className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                        {copied === file.id ? 'Copied' : 'Copy HTML'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </section>
         )}
