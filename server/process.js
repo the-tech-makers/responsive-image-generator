@@ -1,6 +1,7 @@
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { processImage } from './image-processor.js';
+import { touchSession } from './session.js';
 
 const DEFAULT_WIDTHS = [480, 768, 1024, 1280, 1440, 1920];
 const DEFAULT_FORMATS = ['webp'];
@@ -32,11 +33,8 @@ function safeId(value) {
 
 function normalizeWidths(widths) {
   if (!Array.isArray(widths)) return DEFAULT_WIDTHS;
-  return [...new Set(
-    widths
-      .map(Number)
-      .filter((width) => Number.isInteger(width) && width > 0 && width <= 10000),
-  )].sort((a, b) => a - b);
+  return [...new Set(widths.map(Number).filter((width) => Number.isInteger(width) && width > 0 && width <= 10000))]
+    .sort((a, b) => a - b);
 }
 
 export async function handleProcess(req, res, { storageDir }) {
@@ -106,6 +104,7 @@ export async function handleProcess(req, res, { storageDir }) {
       });
     }
 
+    await touchSession(storageDir, sessionId);
     send(res, 200, { sessionId, results });
   } catch (error) {
     console.error(error);
