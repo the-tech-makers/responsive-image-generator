@@ -9,12 +9,21 @@ import { serveStatic } from './server/static.js';
 const rootDir = fileURLToPath(new URL('.', import.meta.url));
 const storageDir = join(rootDir, 'storage');
 const distDir = join(rootDir, 'dist');
+const envPath = join(rootDir, '.env');
+
+if (existsSync(envPath) && typeof process.loadEnvFile === 'function') {
+  try {
+    process.loadEnvFile(envPath);
+  } catch (err) {
+    console.warn('Notice: Could not load .env file:', err.message);
+  }
+}
 
 if (!existsSync(storageDir)) {
   mkdirSync(storageDir, { recursive: true });
 }
 
-const port = Number(process.env.PORT) || 3000;
+const port = process.env.PORT || 3000;
 const CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
 
 const server = http.createServer(async (req, res) => {
