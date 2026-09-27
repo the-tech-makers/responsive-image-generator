@@ -4,9 +4,11 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { handleApiRequest } from './server/api.js';
 import { cleanupSessions } from './server/session.js';
+import { serveStatic } from './server/static.js';
 
 const rootDir = fileURLToPath(new URL('.', import.meta.url));
 const storageDir = join(rootDir, 'storage');
+const distDir = join(rootDir, 'dist');
 
 if (!existsSync(storageDir)) {
   mkdirSync(storageDir, { recursive: true });
@@ -22,8 +24,7 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    res.writeHead(404, { 'Content-Type': 'application/json; charset=utf-8' });
-    res.end(JSON.stringify({ error: 'Not found' }));
+    serveStatic(req, res, distDir);
   } catch (error) {
     console.error(error);
     if (!res.headersSent) {
