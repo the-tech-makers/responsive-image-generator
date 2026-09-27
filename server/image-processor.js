@@ -59,7 +59,7 @@ export async function processImage({ sourcePath, outputDir, widths, formats, qua
         fit: 'inside',
       });
 
-      if (stripMetadata) image = image.withMetadata({ orientation: undefined });
+      if (!stripMetadata) image = image.withMetadata();
       image = applyFormat(image, format, { quality, lossless });
       await image.toFile(outputPath);
 
