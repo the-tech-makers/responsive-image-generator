@@ -1,4 +1,5 @@
 import { mkdir } from 'node:fs/promises';
+import { access } from 'node:fs/promises';
 import { join } from 'node:path';
 import { processImage } from './image-processor.js';
 import { touchSession } from './session.js';
@@ -56,8 +57,11 @@ export async function handleProcess(req, res, { storageDir }) {
     }
 
     const sessionRoot = join(storageDir, 'sessions', sessionId);
+    const uploadRoot = join(sessionRoot, 'uploads');
     const outputRoot = join(sessionRoot, 'output');
     const results = [];
+
+    await access(uploadRoot);
 
     for (const file of files) {
       if (
@@ -71,7 +75,8 @@ export async function handleProcess(req, res, { storageDir }) {
         return;
       }
 
-      const sourcePath = join(sessionRoot, 'uploads', file.filename);
+      const sourcePath = join(uploadRoot, file.filename);
+      await access(sourcePath);
       const outputDir = join(outputRoot, file.id);
       await mkdir(outputDir, { recursive: true });
 
