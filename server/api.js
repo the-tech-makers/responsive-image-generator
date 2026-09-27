@@ -1,4 +1,5 @@
 import { handleUpload } from './upload.js';
+import { handleProcess } from './process.js';
 
 function sendJson(res, status, payload) {
   res.writeHead(status, {
@@ -19,6 +20,11 @@ export async function handleApiRequest(req, res, context) {
 
   if (req.method === 'POST' && path === '/api/upload') {
     await handleUpload(req, res, context);
+    return;
+  }
+
+  if (req.method === 'POST' && path === '/api/process') {
+    await handleProcess(req, res, context);
     return;
   }
 
