@@ -1,10 +1,11 @@
 import Busboy from 'busboy';
-import { createWriteStream, mkdirSync } from 'node:fs';
+import { createWriteStream, mkdirSync, statSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
-import { basename, extname, join } from 'node:path';
+import { extname, basename, join } from 'node:path';
 import sharp from 'sharp';
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
+const MAX_REQUEST_SIZE = 250 * 1024 * 1024;
 const ALLOWED_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.avif']);
 
 function json(res, status, payload) {
@@ -27,21 +28,25 @@ function safeName(filename) {
 
 export async function handleUpload(req, res, { storageDir }) {
   const contentType = req.headers['content-type'] || '';
+  const declaredLength = Number(req.headers['content-length'] || 0);
 
   if (!contentType.startsWith('multipart/form-data')) {
     json(res, 415, { error: 'Multipart form data is required.' });
     return;
   }
 
-  const sessionId = randomUUID();
-  const sessionDir = join(storageDir, 'sessions', sessionId);
-  const uploadDir = join(sessionDir, 'uploads');
+  if (declaredLength > MAX_REQUEST_SIZE) {
+    json(res, 413, { error: 'Upload request is too large.' });
+    return;
+  }
 
+  const sessionId = randomUUID();
+  const uploadDir = join(storageDir, 'sessions', sessionId, 'uploads');
   mkdirSync(uploadDir, { recursive: true });
 
   const files = [];
   const pending = [];
-  let totalBytes = 0;
+  let requestBytes = 0;
   let rejected = null;
 
   const busboy = Busboy({
@@ -49,6 +54,7 @@ export async function handleUpload(req, res, { storageDir }) {
     limits: {
       files: 50,
       fileSize: MAX_FILE_SIZE,
+      parts: 60,
     },
   });
 
@@ -71,11 +77,15 @@ export async function handleUpload(req, res, { storageDir }) {
 
     const writePromise = new Promise((resolve, reject) => {
       const output = createWriteStream(path);
+      let fileBytes = 0;
 
       file.on('data', (chunk) => {
-        totalBytes += chunk.length;
-        if (totalBytes > MAX_FILE_SIZE * 50) {
-          file.destroy(new Error('Request is too large.'));
+        fileBytes += chunk.length;
+        requestBytes += chunk.length;
+
+        if (requestBytes > MAX_REQUEST_SIZE) {
+          rejected = 'Upload request is too large.';
+          file.destroy(new Error(rejected));
         }
       });
 
@@ -88,22 +98,28 @@ export async function handleUpload(req, res, { storageDir }) {
       output.on('finish', resolve);
 
       file.pipe(output);
-    }).then(async () => {
-      const metadata = await sharp(path).metadata();
 
-      files.push({
-        id: randomUUID(),
-        originalName: info.filename,
-        filename,
-        path,
-        width: metadata.width || 0,
-        height: metadata.height || 0,
-        size: totalBytes,
-        format: metadata.format || null,
-      });
+      pending.push(
+        writePromise.then(async () => {
+          if (!fileBytes) {
+            throw new Error(`Empty file: ${info.filename}`);
+          }
+
+          const metadata = await sharp(path).metadata();
+
+          files.push({
+            id: randomUUID(),
+            originalName: info.filename,
+            filename,
+            width: metadata.width || 0,
+            height: metadata.height || 0,
+            size: statSync(path).size,
+            format: metadata.format || null,
+            sessionId,
+          });
+        }),
+      );
     });
-
-    pending.push(writePromise);
   });
 
   busboy.on('error', (error) => {
@@ -119,10 +135,12 @@ export async function handleUpload(req, res, { storageDir }) {
         return;
       }
 
-      json(res, 201, {
-        sessionId,
-        files,
-      });
+      if (!files.length) {
+        json(res, 400, { error: 'No valid images were uploaded.' });
+        return;
+      }
+
+      json(res, 201, { sessionId, files });
     } catch (error) {
       console.error(error);
       json(res, 400, { error: error.message || 'Upload failed.' });
