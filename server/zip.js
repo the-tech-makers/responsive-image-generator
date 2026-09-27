@@ -2,6 +2,7 @@ import { createReadStream } from 'node:fs';
 import { mkdir, readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { spawn } from 'node:child_process';
+import { touchSession } from './session.js';
 
 function validSessionId(value) {
   return typeof value === 'string' && /^[0-9a-f-]{36}$/.test(value);
@@ -45,6 +46,7 @@ export async function handleZip(req, res, { storageDir }) {
 
     await runZip(zipPath, outputDir);
     const fileStat = await stat(zipPath);
+    await touchSession(storageDir, sessionId);
 
     res.writeHead(200, {
       'Content-Type': 'application/zip',
