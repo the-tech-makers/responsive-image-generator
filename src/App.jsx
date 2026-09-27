@@ -38,6 +38,7 @@ export default function App() {
     loading: 'lazy',
     decoding: 'async',
     fetchpriority: 'auto',
+    basePath: './',
   });
   const [copied, setCopied] = useState('');
   const [zipping, setZipping] = useState(false);
@@ -123,9 +124,35 @@ export default function App() {
   );
 
   async function copyHtml(file) {
-    await navigator.clipboard.writeText(file.html);
-    setCopied(file.id);
-    window.setTimeout(() => setCopied(''), 1500);
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(file.html);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = file.html;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        textarea.remove();
+      }
+      setCopied(file.id);
+      window.setTimeout(() => setCopied(''), 1500);
+    } catch {
+      setError('Could not copy HTML to the clipboard.');
+    }
+  }
+
+  function removeFile(fileId) {
+    if (processing || uploading) return;
+    setFiles((current) => current.filter((file) => file.id !== fileId));
+    setResults((current) => current.filter((file) => file.id !== fileId));
+    setAlts((current) => {
+      const next = { ...current };
+      delete next[fileId];
+      return next;
+    });
   }
 
   async function downloadAll() {
@@ -191,6 +218,7 @@ export default function App() {
                     <p className="truncate text-sm font-medium text-slate-900">{file.originalName}</p>
                     <p className="mt-1 text-xs text-slate-500">{file.width} × {file.height} · {formatBytes(file.size)}</p>
                   </div>
+                  <button type="button" onClick={() => removeFile(file.id)} disabled={processing || uploading} className="shrink-0 rounded-md border border-slate-300 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50">Remove</button>
                 </div>
               ))}
             </div>
@@ -264,7 +292,7 @@ export default function App() {
                       <div className="mt-2 space-y-2">
                         {file.results.map((item) => (
                           <div key={item.filename} className="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-3 py-2 text-xs">
-                            <span>{item.width}w · {item.format.toUpperCase()}</span>
+                            <span>{item.width}w · {item.format.toUpperCase()} · {formatBytes(item.size)}{item.sourceSize ? ` · ${Math.max(0, Math.round((1 - item.size / item.sourceSize) * 100))}% smaller` : ''}</span>
                             <a href={item.downloadUrl} className="font-medium text-primary hover:text-primary-hover" download>Download · {formatBytes(item.size)}</a>
                           </div>
                         ))}
@@ -295,6 +323,10 @@ export default function App() {
               <label className="text-sm lg:col-span-2">
                 <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Sizes</span>
                 <input value={htmlOptions.sizes} onChange={(event) => updateHtmlOption('sizes', event.target.value)} className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+              </label>
+              <label className="text-sm lg:col-span-2">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Asset path</span>
+                <input value={htmlOptions.basePath} onChange={(event) => updateHtmlOption('basePath', event.target.value)} placeholder="./images/" className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
               </label>
               <label className="text-sm">
                 <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Loading</span>
