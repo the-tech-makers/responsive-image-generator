@@ -1,4 +1,4 @@
-# Responsive Image Tool — Design Guide
+# Responsive Image Generator — Design Guide
 
 This document defines the visual language and UI structure for the application.
 
@@ -128,7 +128,7 @@ The header should contain:
 
 Example conceptual title:
 
-**Responsive Image Tool**
+**Responsive Image Generator**
 
 Subtitle:
 
