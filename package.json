@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "busboy": "^1.6.0",
-    "sharp": "^0.33.5"
+    "sharp": "^0.33.5",
+    "tinify": "^1.8.3"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
