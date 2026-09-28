@@ -15,6 +15,7 @@ Upload images, generate responsive variants, convert formats, compress output, a
 - Native Node `http`
 - Sharp
 - Busboy
+- Tinify (TinyPNG API client)
 
 ## Development
 
@@ -47,7 +48,19 @@ The project source of truth is in `docs/`:
 
 The application is designed for Node.js 20 hosting, including supported cPanel Node.js environments.
 
-The production startup entry is `app.js`. Run `npm run build` before starting production so the native Node server can serve the Vite output from `dist/`.
+The production startup entry is `app.js`.
+
+### TinyPNG configuration
+
+TinyPNG compression is optional. When enabled, the application first creates the requested responsive sizes locally and then sends those resized images to Tinify for WebP or AVIF optimization.
+
+Configure the API key only on the server:
+
+```text
+TINIFY_API_KEY=your-api-key
+```
+
+Never commit the API key to Git or expose it to frontend code. TinyPNG processing uses the Tinify API and therefore consumes the account's compression allowance. Run `npm run build` before starting production so the native Node server can serve the Vite output from `dist/`.
 
 ZIP downloads currently use the host system's `zip` command. Verify that the cPanel server provides `zip` before enabling the Download ZIP feature in production.
 
