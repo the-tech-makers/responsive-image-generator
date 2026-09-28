@@ -67,6 +67,8 @@ Before adding a package, ask:
 
 Do not add a dependency merely for convenience.
 
+The official Tinify Node.js client may be added for TinyPNG integration if it provides a clear, maintainable API integration. If a native Node.js HTTPS implementation is simpler and avoids an unnecessary dependency, that is also acceptable. The chosen approach must be documented before implementation.
+
 ## 4. File Size Rules
 
 ### 4.1 Maximum File Size
@@ -148,9 +150,54 @@ Metadata removal must be explicit in the processing configuration.
 
 When enabled, unnecessary metadata should be removed, with special attention to EXIF/GPS information.
 
-## 7. HTML Rules
+## 7. TinyPNG / Tinify Rules
 
-### 7.1 Alt Text
+### 7.1 Optional Feature
+
+TinyPNG compression is optional.
+
+When disabled, the existing Sharp-only processing pipeline remains unchanged.
+
+### 7.2 Processing Order
+
+TinyPNG processing must occur **after responsive resizing**.
+
+The intended sequence is:
+
+**Sharp resize → Tinify compression/conversion → final output**
+
+Do not send the original upload directly to Tinify when the user has requested responsive widths.
+
+### 7.3 Preferred Format
+
+When TinyPNG compression is enabled, the user must select exactly one preferred output format:
+
+- WebP.
+- AVIF.
+
+### 7.4 API Key Security
+
+The Tinify API key must be configured server-side through:
+
+`TINIFY_API_KEY`
+
+Never expose the key to browser JavaScript, API responses, generated HTML, logs, or Git.
+
+### 7.5 External Service Failures
+
+Tinify account, client, server, or connection errors must be handled explicitly.
+
+The UI must distinguish a TinyPNG processing failure from a normal Sharp processing failure.
+
+Do not claim that an image is TinyPNG-optimized unless the Tinify operation actually completed successfully.
+
+### 7.6 Compression Accounting
+
+Each TinyPNG API compression/conversion operation consumes the Tinify account's API allowance. Batch processing must therefore avoid duplicate Tinify requests.
+
+## 8. HTML Rules
+
+### 8.1 Alt Text
 
 Manual alt text is supported.
 
@@ -164,17 +211,17 @@ must be generated.
 
 The application must not invent alt text.
 
-### 7.2 Responsive Markup
+### 8.2 Responsive Markup
 
 `srcset` must be generated from the actual files successfully produced by the processor.
 
 The HTML generator must never reference a file that does not exist.
 
-### 7.3 Dimensions
+### 8.3 Dimensions
 
 Width and height should be included by default when available.
 
-### 7.4 Loading
+### 8.4 Loading
 
 Default:
 
@@ -182,7 +229,7 @@ Default:
 loading="lazy"
 ```
 
-### 7.5 Decoding
+### 8.5 Decoding
 
 Default:
 
@@ -190,7 +237,7 @@ Default:
 decoding="async"
 ```
 
-### 7.6 Fetch Priority
+### 8.6 Fetch Priority
 
 Default:
 
@@ -200,7 +247,7 @@ fetchpriority="auto"
 
 Users may change this.
 
-## 8. Temporary Storage Rules
+## 9. Temporary Storage Rules
 
 Uploaded/generated files are temporary.
 
@@ -210,7 +257,7 @@ Each session must have isolated storage.
 
 The application must not allow a client to specify arbitrary filesystem paths.
 
-## 9. Session Rules
+## 10. Session Rules
 
 V1 does not require user accounts.
 
@@ -227,7 +274,7 @@ Initial inactivity expiration:
 
 **12 hours.**
 
-## 10. Cleanup Rules
+## 11. Cleanup Rules
 
 Cleanup must be automated.
 
@@ -246,7 +293,7 @@ Cleanup must safely handle:
 
 Cleanup errors must not crash the main application.
 
-## 11. Security Rules
+## 12. Security Rules
 
 Even though the application is internal:
 
@@ -261,7 +308,7 @@ Even though the application is internal:
 
 If the application becomes publicly accessible, authentication or access restrictions must be evaluated before exposing it.
 
-## 12. Performance Rules
+## 13. Performance Rules
 
 Do not process an unlimited number of images simultaneously.
 
@@ -276,7 +323,7 @@ Processing concurrency should be configurable if necessary.
 
 Large batch uploads must not cause uncontrolled memory consumption.
 
-## 13. UI Rules
+## 14. UI Rules
 
 The application should feel like a professional internal developer tool.
 
@@ -293,7 +340,7 @@ Do not create excessively long forms.
 
 Related options should be grouped into logical sections.
 
-## 14. No Presets in V1
+## 15. No Presets in V1
 
 Do not implement:
 
@@ -304,7 +351,7 @@ Do not implement:
 
 These may be considered later.
 
-## 15. No AI Features in V1
+## 16. No AI Features in V1
 
 Do not implement:
 
@@ -315,19 +362,19 @@ Do not implement:
 
 Alt text is manually entered by the user.
 
-## 16. No Database in V1
+## 17. No Database in V1
 
 Do not introduce a database.
 
 Temporary session information should be handled through the filesystem.
 
-## 17. No Authentication in V1
+## 18. No Authentication in V1
 
 Do not build login/register functionality.
 
 Authentication can be added later if deployment requirements change.
 
-## 18. No Code Before Approval
+## 19. No Code Before Approval
 
 Before implementing application code:
 
@@ -340,7 +387,7 @@ These markdown documents are the project source of truth.
 
 If a later request conflicts with these rules, the conflict must be identified before implementation.
 
-## 19. Change Control
+## 20. Change Control
 
 Do not silently change architecture or requirements.
 
@@ -351,7 +398,7 @@ If implementation reveals a genuine reason to change:
 3. Identify which project rule is affected.
 4. Wait for approval before making the architectural change.
 
-## 20. Definition of Done
+## 21. Definition of Done
 
 A feature is not considered complete merely because the code exists.
 
