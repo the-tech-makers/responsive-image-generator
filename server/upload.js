@@ -132,20 +132,22 @@ export async function handleUpload(req, res, { storageDir }) {
     pending.push(pendingFile);
   });
 
-  busboy.on('error', (error) => { rejected = error.message; });
+  let settledUpload = false;
+  const finishUpload = async () => {
+    if (settledUpload) return;
+    settledUpload = true;
 
-  busboy.on('finish', async () => {
     try {
       await Promise.all(pending);
 
       if (rejected) {
-        await rm(sessionRoot, { recursive: true, force: true });
+        await rm(sessionRoot, { recursive: true, force: true }).catch(() => {});
         json(res, 400, { error: rejected });
         return;
       }
 
       if (!files.length) {
-        await rm(sessionRoot, { recursive: true, force: true });
+        await rm(sessionRoot, { recursive: true, force: true }).catch(() => {});
         json(res, 400, { error: 'No valid images were uploaded.' });
         return;
       }
@@ -155,11 +157,28 @@ export async function handleUpload(req, res, { storageDir }) {
       json(res, 201, { sessionId, files });
     } catch (error) {
       console.error(error);
-      await rm(sessionRoot, { recursive: true, force: true });
+      await rm(sessionRoot, { recursive: true, force: true }).catch(() => {});
       json(res, 400, { error: error.message || 'Upload failed.' });
     }
+  };
+
+  busboy.on('error', (error) => {
+    rejected = error.message;
+    finishUpload();
   });
 
-  req.on('aborted', () => { rejected = 'Upload request was aborted.'; });
+  busboy.on('finish', finishUpload);
+  busboy.on('close', finishUpload);
+
+  req.on('error', (error) => {
+    rejected = error.message;
+    finishUpload();
+  });
+
+  req.on('aborted', () => {
+    rejected = 'Upload request was aborted.';
+    finishUpload();
+  });
+
   req.pipe(busboy);
 }
