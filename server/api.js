@@ -29,11 +29,11 @@ export async function handleApiRequest(req, res, context) {
   if (path.startsWith('/api/v1/')) {
     if (!checkRateLimit(req, res)) return;
     if (req.method === 'POST' && path === '/api/v1/images/process') { await handleApiV1Process(req, res, context); return; }
-    const resultMatch = path.match(/^\\/api\\/v1\\/images\\/([0-9a-f-]{36})$/);
+    const resultMatch = path.match(/^\/api\/v1\/images\/([0-9a-f-]{36})$/);
     if (req.method === 'GET' && resultMatch) { await handleApiV1Result(req, res, context, resultMatch[1]); return; }
-    const zipMatch = path.match(/^\\/api\\/v1\\/images\\/([0-9a-f-]{36})\\/zip$/);
+    const zipMatch = path.match(/^\/api\/v1\/images\/([0-9a-f-]{36})\/zip$/);
     if (req.method === 'GET' && zipMatch) { await handleApiV1Zip(req, res, context, zipMatch[1]); return; }
-    const fileMatch = path.match(/^\\/api\\/v1\\/images\\/([0-9a-f-]{36})\\/files\\/([a-zA-Z0-9-]{36})\\/(.+)$/);
+    const fileMatch = path.match(/^\/api\/v1\/images\/([0-9a-f-]{36})\/files\/([a-zA-Z0-9-]{36})\/(.+)$/);
     if (req.method === 'GET' && fileMatch) { await handleApiV1File(req, res, context, fileMatch[1], fileMatch[2], decodeURIComponent(fileMatch[3])); return; }
     sendJson(res, 404, { error: 'API route not found' });
     return;
