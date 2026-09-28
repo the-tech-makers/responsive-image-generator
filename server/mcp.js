@@ -233,8 +233,10 @@ export async function handleMcpRequest(req, res, { storageDir }) {
     return;
   }
 
+  let body = null;
+
   try {
-    const body = await new Promise((resolve, reject) => {
+    body = await new Promise((resolve, reject) => {
       const chunks = [];
       let size = 0;
       req.on('data', (chunk) => {
