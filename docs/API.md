@@ -37,6 +37,18 @@ The processing order is:
 
 Supported settings include responsive widths, output formats, quality/lossless settings, metadata handling, no-upscale, TinyPNG WebP/AVIF and HTML generation options.
 
+### Upscaling policy
+
+`noUpscale` defaults to `true`.
+
+AI agents **must not enable upscaling unless the user explicitly asks for it**. In particular, an agent should not set `noUpscale: false` merely because a requested responsive width is larger than the source image.
+
+When `noUpscale` is `true`, widths larger than the source image width are skipped. If none of the requested widths fit, the source width is used as the output width.
+
+When `noUpscale` is explicitly set to `false`, the server is allowed to generate output widths larger than the original image. These are genuine server-generated files produced from the supplied source image, but they cannot contain additional source detail and should not be represented as if the original image had that resolution.
+
+**AI-agent rule:** preserve `noUpscale: true` unless the user specifically requests enlargement/upscaling. If the user asks for responsive variants but does not mention upscaling, do not upscale.
+
 ## API Key Generation
 
 Generate a key with Node.js:
