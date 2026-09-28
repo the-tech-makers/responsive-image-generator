@@ -12,7 +12,6 @@ const buckets = new Map();
 
 function drain() {
   while (active < maxConcurrent && waiters.length) {
-    active += 1;
     waiters.shift()();
   }
 }
@@ -20,10 +19,8 @@ function drain() {
 export async function withProcessingSlot(task) {
   if (active >= maxConcurrent) {
     await new Promise((resolve) => waiters.push(resolve));
-    active -= 1;
-  } else {
-    active += 1;
   }
+  active += 1;
 
   try {
     return await task();
