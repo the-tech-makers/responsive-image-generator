@@ -185,7 +185,7 @@ export default function App() {
       <div className="mx-auto max-w-6xl">
         <header className="mb-6">
           <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-primary">The Tech Makers</p>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Responsive Image Tool</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Responsive Image Generator</h1>
           <p className="mt-1 text-sm text-slate-500">Resize · Compress · Convert · Generate HTML</p>
         </header>
 
@@ -312,106 +312,44 @@ export default function App() {
                 </div>
                 {results.length > 0 && <button type="button" onClick={downloadAll} disabled={zipping} className="shrink-0 rounded-md border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50">{zipping ? 'Preparing…' : 'Download ZIP'}</button>}
               </div>
-              {!results.length ? (
-                <p className="mt-2 text-sm text-slate-500">Processed variants will appear here.</p>
-              ) : (
-                <div className="mt-4 space-y-4">
-                  {results.map((file) => (
-                    <div key={file.id}>
-                      <p className="text-sm font-medium text-slate-900">{file.originalName}</p>
-                      <div className="mt-2 space-y-2">
-                        {file.results.map((item) => (
-                          <div key={item.filename} className="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-3 py-2 text-xs">
-                            <span>{item.width}w · {item.format.toUpperCase()} · {formatBytes(item.size)}{item.sourceSize ? ` · ${Math.max(0, Math.round((1 - item.size / item.sourceSize) * 100))}% smaller` : ''}</span>
-                            <a href={item.downloadUrl} className="font-medium text-primary hover:text-primary-hover" download>Download · {formatBytes(item.size)}</a>
-                          </div>
-                        ))}
+
+              {!results.length && <div className="mt-5 rounded-md bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">Process your images to see the generated variants.</div>}
+
+              <div className="mt-5 space-y-4">
+                {generatedHtml.map((file) => (
+                  <article key={file.id} className="rounded-md border border-slate-200 p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <h3 className="text-sm font-medium text-slate-900">{file.originalName}</h3>
+                        <p className="mt-1 text-xs text-slate-500">{file.results?.length || 0} generated variant{file.results?.length === 1 ? '' : 's'}</p>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
+
+                    <div className="mt-4 overflow-x-auto rounded-md bg-slate-950 p-4">
+                      <pre className="whitespace-pre-wrap text-xs leading-5 text-slate-100">{file.html}</pre>
+                    </div>
+
+                    <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto_auto]">
+                      <input value={alts[file.id] || ''} onChange={(event) => setAlts((current) => ({ ...current, [file.id]: event.target.value }))} placeholder="Alt text (optional)" className="rounded-md border border-slate-300 px-3 py-2 text-sm" />
+                      <button type="button" onClick={() => copyHtml(file)} className="rounded-md border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700">{copied === file.id ? 'Copied' : 'Copy HTML'}</button>
+                      <a href={`/api/download?sessionId=${encodeURIComponent(sessionId)}&fileId=${encodeURIComponent(file.id)}`} className="rounded-md border border-slate-300 px-3 py-2 text-center text-xs font-medium text-slate-700">Download</a>
+                    </div>
+                  </article>
+                ))}
+              </div>
             </div>
           </section>
         )}
 
         {results.length > 0 && (
           <section className="mt-6 rounded-lg border border-slate-200 bg-white p-5">
-            <div className="border-b border-slate-200 pb-4">
-              <h2 className="text-sm font-semibold text-slate-900">HTML Generator</h2>
-              <p className="mt-1 text-xs text-slate-500">Generate production-ready responsive markup from the variants that were actually created.</p>
-            </div>
-
-            <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-              <label className="text-sm">
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Element</span>
-                <select value={htmlOptions.element} onChange={(event) => updateHtmlOption('element', event.target.value)} className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
-                  <option value="picture">&lt;picture&gt;</option>
-                  <option value="img">&lt;img&gt;</option>
-                </select>
-              </label>
-              <label className="text-sm lg:col-span-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Sizes</span>
-                <input value={htmlOptions.sizes} onChange={(event) => updateHtmlOption('sizes', event.target.value)} className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
-              </label>
-              <label className="text-sm lg:col-span-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Asset path</span>
-                <input value={htmlOptions.basePath} onChange={(event) => updateHtmlOption('basePath', event.target.value)} placeholder="./images/" className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
-              </label>
-              <label className="text-sm">
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Loading</span>
-                <select value={htmlOptions.loading} onChange={(event) => updateHtmlOption('loading', event.target.value)} className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
-                  <option value="lazy">lazy</option>
-                  <option value="eager">eager</option>
-                </select>
-              </label>
-              <label className="text-sm">
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Fetch priority</span>
-                <select value={htmlOptions.fetchpriority} onChange={(event) => updateHtmlOption('fetchpriority', event.target.value)} className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
-                  <option value="auto">auto</option>
-                  <option value="high">high</option>
-                  <option value="low">low</option>
-                </select>
-              </label>
-            </div>
-
-            <label className="mt-4 block text-sm">
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Decoding</span>
-              <select value={htmlOptions.decoding} onChange={(event) => updateHtmlOption('decoding', event.target.value)} className="mt-2 w-full max-w-xs rounded-md border border-slate-300 px-3 py-2 text-sm">
-                <option value="async">async</option>
-                <option value="sync">sync</option>
-                <option value="auto">auto</option>
-              </select>
-            </label>
-
-            <div className="mt-6 space-y-5">
-              {generatedHtml.map((file) => (
-                <div key={file.id} className="rounded-md border border-slate-200">
-                  <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-slate-900">{file.originalName}</p>
-                      <p className="text-xs text-slate-500">{file.results.length} generated variant{file.results.length === 1 ? '' : 's'}</p>
-                    </div>
-                    <label className="flex items-center gap-2 text-xs text-slate-600">
-                      Alt
-                      <input
-                        value={alts[file.id] || ''}
-                        onChange={(event) => setAlts((current) => ({ ...current, [file.id]: event.target.value }))}
-                        placeholder="Describe the image"
-                        className="w-full min-w-48 rounded-md border border-slate-300 px-3 py-2 text-sm"
-                      />
-                    </label>
-                  </div>
-                  <div className="p-4">
-                    <pre className="max-h-72 overflow-auto rounded-md bg-slate-950 p-4 text-xs leading-5 text-slate-100"><code>{file.html}</code></pre>
-                    <div className="mt-3 flex justify-end">
-                      <button type="button" onClick={() => copyHtml(file)} className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                        {copied === file.id ? 'Copied' : 'Copy HTML'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
+            <h2 className="text-sm font-semibold text-slate-900">HTML Settings</h2>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+              <label className="text-sm"><span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Element</span><select value={htmlOptions.element} onChange={(event) => updateHtmlOption('element', event.target.value)} className="mt-2 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"><option value="picture">&lt;picture&gt;</option><option value="img">&lt;img&gt;</option></select></label>
+              <label className="text-sm"><span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Sizes</span><input value={htmlOptions.sizes} onChange={(event) => updateHtmlOption('sizes', event.target.value)} className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" /></label>
+              <label className="text-sm"><span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Loading</span><select value={htmlOptions.loading} onChange={(event) => updateHtmlOption('loading', event.target.value)} className="mt-2 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"><option value="lazy">lazy</option><option value="eager">eager</option></select></label>
+              <label className="text-sm"><span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Decoding</span><select value={htmlOptions.decoding} onChange={(event) => updateHtmlOption('decoding', event.target.value)} className="mt-2 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"><option value="async">async</option><option value="sync">sync</option><option value="auto">auto</option></select></label>
+              <label className="text-sm"><span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Fetch priority</span><select value={htmlOptions.fetchpriority} onChange={(event) => updateHtmlOption('fetchpriority', event.target.value)} className="mt-2 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"><option value="auto">auto</option><option value="high">high</option><option value="low">low</option></select></label>
             </div>
           </section>
         )}
