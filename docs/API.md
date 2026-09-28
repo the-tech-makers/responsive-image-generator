@@ -26,8 +26,9 @@ Current endpoints:
 - `POST /api/v1/images/process` — upload and process an image in one request.
 - `GET /api/v1/images/:jobId` — retrieve job/result metadata.
 - `GET /api/v1/images/:jobId/files/:fileId/:filename` — download one generated result.
+- `GET /api/v1/images/:jobId/zip` — download all generated variants as a ZIP.
 
-ZIP generation already exists for the web application's legacy `GET /api/download-all?sessionId=...` route. A versioned ZIP endpoint is intentionally still pending and is not advertised as part of V1 yet.
+The versioned ZIP endpoint uses the same job/session storage as the web application and requires the API Bearer key.
 
 ## Processing
 
@@ -154,4 +155,4 @@ The result contains a `jobId`, generated variants, actual generated dimensions, 
 
 ## Verification status
 
-Repository-level MCP implementation and protocol-focused acceptance tests are present. Live verification with an actual MCP client against a running deployment remains required before marking MCP integration fully tested.
+Repository-level MCP implementation and protocol-focused acceptance tests are present. API/MCP tests run in GitHub Actions on pushes and pull requests. Live verification with an actual MCP client against the running deployment remains required before marking MCP integration fully tested.
