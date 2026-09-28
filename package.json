@@ -1,8 +1,22 @@
 {
-  "name": "responsive-image-tool",
+  "name": "responsive-image-generator",
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "author": {
+    "name": "Sanjay Goswami / The Tech Makers",
+    "email": "info@thetechmakers.com",
+    "url": "https://www.thetechmakers.com"
+  },
+  "homepage": "https://github.com/the-tech-makers/responsive-image-generator",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/the-tech-makers/responsive-image-generator.git"
+  },
+  "bugs": {
+    "url": "https://github.com/the-tech-makers/responsive-image-generator/issues"
+  },
+  "license": "MIT",
   "scripts": {
     "dev": "concurrently \"node app.js\" \"vite\"",
     "build": "vite build",
