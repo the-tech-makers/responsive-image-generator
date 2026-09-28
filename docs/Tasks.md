@@ -2,7 +2,7 @@
 
 Tasks are ordered by dependency and priority.
 
-> **Current verification status (2026-09-28):** API/MCP implementation is underway. Repository-level implementation has been added; live deployment and protocol/client verification remain pending.
+> **Current verification status (2026-09-28):** API/MCP implementation is underway. Repository-level implementation is present; live deployment and MCP client/protocol verification remain pending.
 
 Status values:
 - [ ] Not started
@@ -48,15 +48,17 @@ Status values:
 - [~] Verify generated HTML against live API output.
 
 ## 32. MCP Interface
-- [~] Define MCP tools around the existing API/core capabilities — tool schemas added.
-- [~] Add `process_image` tool — schema added; binary MCP transport still pending.
-- [~] Add `get_image_result` tool — implemented through the existing result API.
-- [~] Add `download_image` tool/resource — implemented as generated download URLs.
-- [ ] Add `generate_img_tag` tool with full job-backed implementation.
-- [ ] Add `generate_picture_tag` tool with full job-backed implementation.
+- [x] Define MCP tools and input schemas.
+- [x] Implement `process_image` with base64 image input and 25 MB image limit.
+- [x] Implement MCP image processing using the shared Sharp/Tinify engine.
+- [x] Implement `get_image_result`.
+- [x] Implement `download_image` result URLs.
+- [x] Implement job-backed `generate_img_tag`.
+- [x] Implement job-backed `generate_picture_tag`.
 - [x] Authenticate MCP requests using the same server-side API-key mechanism.
 - [x] Ensure MCP does not duplicate image-processing logic.
-- [~] Expose MCP endpoint at `/mcp` — repository implementation added; live protocol verification pending.
+- [~] Expose MCP endpoint at `/mcp` — repository implementation added; live protocol/client verification pending.
+- [~] Verify MCP response behavior with a real MCP client.
 
 ## 33. API Security and Resource Protection
 - [x] Add API upload/body limits.
@@ -64,12 +66,12 @@ Status values:
 - [ ] Apply controlled processing concurrency to API jobs.
 - [ ] Add rate limiting before external/public use.
 - [x] Ensure TinyPNG API keys are never exposed through API/MCP.
-- [ ] Add API-specific acceptance tests.
+- [ ] Add API/MCP acceptance tests.
 
 ## 34. API/MCP Documentation
 - [x] Document API authentication.
 - [x] Document processing request schema.
 - [~] Document result schema.
 - [x] Document HTML generation options.
-- [~] Document MCP tools and parameters.
-- [ ] Add API usage examples for AI agents.
+- [x] Document MCP tools and parameters.
+- [ ] Add API/MCP usage examples for AI agents.
