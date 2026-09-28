@@ -30,6 +30,12 @@ Current endpoints:
 
 The versioned ZIP endpoint uses the same job/session storage as the web application and requires the API Bearer key.
 
+## Resource protection
+
+Versioned API and MCP traffic is rate-limited in-process. Defaults are 60 requests per 60 seconds per Bearer credential, configurable with `IMAGE_TOOL_RATE_LIMIT` and `IMAGE_TOOL_RATE_WINDOW_MS`. Image processing is also limited to 2 concurrent jobs by default, configurable with `IMAGE_TOOL_MAX_CONCURRENT`.
+
+When the rate limit is exceeded, the API returns HTTP 429 with `Retry-After`. Processing jobs wait for an available processing slot rather than running without a concurrency bound.
+
 ## Processing
 
 The processing order is:
