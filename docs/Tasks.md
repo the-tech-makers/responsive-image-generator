@@ -33,7 +33,7 @@ Status values:
 ## 30. Result and Download API
 - [x] Implement `GET /api/v1/images/:jobId`.
 - [x] Implement individual generated-file download.
-- [ ] Implement ZIP download through versioned API.
+- [x] Implement ZIP download through versioned API.
 - [x] Reject expired/nonexistent jobs.
 - [x] Prevent access to another job/session's files.
 - [x] Never expose filesystem paths in API responses.
@@ -45,7 +45,7 @@ Status values:
 - [x] Support `sizes`, width, height, alt, loading, decoding and fetchpriority.
 - [x] Keep alt text blank when not supplied.
 - [x] Return HTML as structured JSON.
-- [~] Verify generated HTML against live API output.
+- [~] Verify generated HTML against live API output — repository coverage is present; live deployment verification remains pending.
 
 ## 32. MCP Interface
 - [x] Define MCP tools and input schemas.
@@ -57,7 +57,7 @@ Status values:
 - [x] Implement job-backed `generate_picture_tag`.
 - [x] Authenticate MCP requests using the same server-side API-key mechanism.
 - [x] Ensure MCP does not duplicate image-processing logic.
-- [~] Expose MCP endpoint at `/mcp` — route is now wired through the Node dispatcher; live protocol/client verification remains pending.
+- [~] Expose MCP endpoint at `/mcp` — route is wired through the Node dispatcher; live deployment verification remains pending.
 - [~] Verify MCP response behavior with a real MCP client.
 
 ## 33. API Security and Resource Protection
@@ -66,7 +66,7 @@ Status values:
 - [ ] Apply controlled processing concurrency to API jobs.
 - [ ] Add rate limiting before external/public use.
 - [x] Ensure TinyPNG API keys are never exposed through API/MCP.
-- [~] Add API/MCP acceptance tests — native Node MCP protocol tests added; execution remains pending in the deployment/CI environment.
+- [x] Add API/MCP acceptance tests — native Node MCP/API tests added and wired into GitHub Actions CI.
 
 ## 34. API/MCP Documentation
 - [x] Document API authentication.
