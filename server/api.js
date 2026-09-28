@@ -2,6 +2,7 @@ import { handleUpload } from './upload.js';
 import { handleProcess } from './process.js';
 import { handleDownload } from './download.js';
 import { handleZip } from './zip.js';
+import { handleApiV1Info, handleApiV1Process, handleApiV1Result } from './api-v1.js';
 
 function sendJson(res, status, payload) {
   res.writeHead(status, {
@@ -17,6 +18,23 @@ export async function handleApiRequest(req, res, context) {
 
   if (req.method === 'GET' && path === '/api/health') {
     sendJson(res, 200, { ok: true });
+    return;
+  }
+
+  if (path === '/api/v1') {
+    if (req.method === 'GET') await handleApiV1Info(req, res);
+    else sendJson(res, 405, { error: 'Method not allowed.' });
+    return;
+  }
+
+  if (req.method === 'POST' && path === '/api/v1/images/process') {
+    await handleApiV1Process(req, res, context);
+    return;
+  }
+
+  const resultMatch = path.match(/^\/api\/v1\/images\/([0-9a-f-]{36})$/);
+  if (req.method === 'GET' && resultMatch) {
+    await handleApiV1Result(req, res, context, resultMatch[1]);
     return;
   }
 
