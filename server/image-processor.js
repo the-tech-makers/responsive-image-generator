@@ -1,6 +1,8 @@
 import { mkdir, stat } from 'node:fs/promises';
 import { basename, extname, join } from 'node:path';
 import sharp from 'sharp';
+import { writeFile } from 'node:fs/promises';
+import { compressWithTinyPng } from './tinypng.js';
 
 const FORMAT_CONFIG = {
   webp: { extension: 'webp', mime: 'image/webp' },
@@ -30,7 +32,7 @@ function applyFormat(image, format, options) {
   return image.png(options.lossless ? { compressionLevel: 9 } : { compressionLevel: 6, quality: options.quality });
 }
 
-export async function processImage({ sourcePath, outputDir, widths, formats, quality = 80, lossless = false, stripMetadata = true, noUpscale = true }) {
+export async function processImage({ sourcePath, outputDir, widths, formats, quality = 80, lossless = false, stripMetadata = true, noUpscale = true, tinyPng = null }) {
   await mkdir(outputDir, { recursive: true });
 
   const metadata = await sharp(sourcePath).metadata();
@@ -45,6 +47,42 @@ export async function processImage({ sourcePath, outputDir, widths, formats, qua
   const finalWidths = actualWidths.length ? actualWidths : [sourceWidth];
   const sourceStem = basename(sourcePath, extname(sourcePath));
   const results = [];
+
+  if (tinyPng?.enabled) {
+    const format = tinyPng.format;
+
+    for (const width of finalWidths) {
+      let image = sharp(sourcePath).resize({
+        width,
+        withoutEnlargement: noUpscale,
+        fit: 'inside',
+      });
+
+      if (!stripMetadata) image = image.withMetadata();
+
+      const resizedBuffer = await image.png({ compressionLevel: 9 }).toBuffer();
+      const compressedBuffer = await compressWithTinyPng(resizedBuffer, format);
+      const outputName = `${sourceStem}-${width}w.${FORMAT_CONFIG[format].extension}`;
+      const outputPath = join(outputDir, outputName);
+
+      await writeFile(outputPath, compressedBuffer);
+      const outputStat = await stat(outputPath);
+
+      results.push({
+        filename: outputName,
+        path: outputPath,
+        width,
+        height: sourceWidth ? Math.round(sourceHeight * (width / sourceWidth)) : 0,
+        format,
+        mime: FORMAT_CONFIG[format].mime,
+        size: outputStat.size,
+        sourceSize: resizedBuffer.length,
+        originalSize: metadata.size || null,
+      });
+    }
+
+    return { sourceWidth, sourceHeight, results };
+  }
 
   for (const format of formats) {
     if (!FORMAT_CONFIG[format]) continue;
@@ -73,6 +111,7 @@ export async function processImage({ sourcePath, outputDir, widths, formats, qua
         mime: FORMAT_CONFIG[format].mime,
         size: outputStat.size,
         sourceSize: metadata.size || null,
+        originalSize: metadata.size || null,
       });
     }
   }
