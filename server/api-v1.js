@@ -105,7 +105,7 @@ export async function handleApiV1Process(req, res, { storageDir }) {
 
 export async function handleApiV1Info(req, res) {
   if (!requireApiKey(req, res)) return;
-  json(res, 200, { name: 'Responsive Image Tool API', version: '1', capabilities: ['process_image', 'get_image_result', 'generate_img_tag', 'generate_picture_tag', 'download_image'], processing: ['responsive-resize', 'webp', 'avif', 'jpeg', 'png', 'tinypng'] });
+  json(res, 200, { name: 'Responsive Image Tool API', version: '1', capabilities: ['process_image', 'get_image_result', 'generate_img_tag', 'generate_picture_tag', 'download_image', 'download_zip'], processing: ['responsive-resize', 'webp', 'avif', 'jpeg', 'png', 'tinypng'] });
 }
 
 export async function handleApiV1Result(req, res, { storageDir }, jobId) {
