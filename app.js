@@ -28,7 +28,12 @@ const CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
 
 const server = http.createServer(async (req, res) => {
   try {
-    if (req.url?.startsWith('/api/')) {
+    const pathname = req.url ? new URL(req.url, 'http://localhost').pathname : '/';
+
+    // MCP is exposed at /mcp alongside the versioned /api/v1 endpoints.
+    // Keep both paths on the same native Node request dispatcher so MCP
+    // requests do not accidentally fall through to the static frontend.
+    if (pathname.startsWith('/api/') || pathname === '/mcp') {
       await handleApiRequest(req, res, { storageDir });
       return;
     }
