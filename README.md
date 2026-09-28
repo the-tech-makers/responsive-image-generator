@@ -1,4 +1,4 @@
-# Responsive Image Tool
+# Responsive Image Generator
 
 A responsive-image processing service and web application from The Tech Makers. It can generate responsive image variants, convert formats, optimize output, and expose the same processing capabilities through a versioned REST API and MCP server for AI agents and developer tooling.
 
