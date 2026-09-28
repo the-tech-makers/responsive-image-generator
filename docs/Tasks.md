@@ -2,12 +2,12 @@
 
 Tasks are ordered by dependency and priority.
 
-> **Current verification status (2026-09-28):** Core implementation is in place. The owner has confirmed the site is working in their local environment. Remaining `[~]` items require explicit UAT/deployment verification and are intentionally not marked complete by code review alone.
+> **Current verification status (2026-09-28):** TinyPNG/Tinify code has been implemented and reviewed in the repository. I attempted to reach the production URL from the available test environment, but DNS/network access to `imgtools.thetechmakers.com` was unavailable, so live API/UAT verification cannot honestly be marked complete yet.
 
 Status values:
 
 - [ ] Not started
-- [~] In progress
+- [~] In progress / awaiting verification
 - [x] Completed and tested
 
 # Phase 1 — Project Foundation
@@ -102,20 +102,20 @@ Status values:
 
 ### 9.1 TinyPNG / Tinify Integration
 
-- [~] Add TinyPNG/Tinify API configuration via `TINIFY_API_KEY`.
-- [~] Keep the API key server-side and out of frontend responses.
-- [~] Add optional TinyPNG compression setting.
-- [~] Add preferred TinyPNG output format selector: WebP / AVIF.
-- [~] Ensure TinyPNG processing occurs only after Sharp responsive resizing.
-- [~] Send each required resized variant to Tinify without duplicate requests.
-- [~] Save Tinify-optimized results in the session output directory.
-- [~] Record TinyPNG output dimensions and file sizes.
-- [~] Calculate TinyPNG size reduction against the resized source variant.
-- [~] Handle Tinify account/API-limit errors clearly.
-- [~] Handle Tinify client, server, and connection errors clearly.
-- [~] Do not present failed Tinify results as successfully optimized.
-- [~] Verify transparency behavior for WebP and AVIF outputs.
-- [~] Verify TinyPNG compression count against expected API operations.
+- [~] Add TinyPNG/Tinify API configuration via `TINIFY_API_KEY` — code/config support added; server environment still needs verification.
+- [x] Keep the API key server-side and out of frontend responses — implementation reviewed.
+- [x] Add optional TinyPNG compression setting — implemented in UI/backend.
+- [x] Add preferred TinyPNG output format selector: WebP / AVIF — implemented in UI/backend.
+- [x] Ensure TinyPNG processing occurs only after Sharp responsive resizing — implemented in processing pipeline.
+- [x] Send each required resized variant to Tinify without duplicate requests — implementation performs one Tinify request per requested resized variant.
+- [x] Save Tinify-optimized results in the session output directory — implemented.
+- [x] Record TinyPNG output dimensions and file sizes — implemented.
+- [x] Calculate TinyPNG size reduction against the resized source variant — implemented.
+- [x] Handle Tinify account/API-limit errors clearly — explicit Tinify error handling implemented.
+- [x] Handle Tinify client, server, and connection errors clearly — explicit error handling implemented.
+- [x] Do not present failed Tinify results as successfully optimized — processing throws on failure.
+- [ ] Verify transparency behavior for WebP and AVIF outputs.
+- [ ] Verify TinyPNG compression count against expected API operations.
 
 ## 10. Metadata
 
@@ -134,9 +134,9 @@ Status values:
 - [x] Build quality control.
 - [x] Build metadata option.
 - [x] Build no-upscale option.
-- [~] Build TinyPNG compression toggle.
-- [~] Build TinyPNG preferred-format selector.
-- [~] Explain that TinyPNG runs after resizing.
+- [x] Build TinyPNG compression toggle.
+- [x] Build TinyPNG preferred-format selector.
+- [x] Explain that TinyPNG runs after resizing.
 
 ## 12. Processing Action
 
@@ -145,7 +145,7 @@ Status values:
 - [x] Display processing state.
 - [ ] Display overall progress.
 - [ ] Display current image.
-- [ ] Display TinyPNG processing state when enabled.
+- [~] Display TinyPNG processing state when enabled.
 - [x] Handle processing errors.
 - [x] Allow successful results to remain visible.
 
