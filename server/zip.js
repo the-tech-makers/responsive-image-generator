@@ -3,6 +3,7 @@ import { mkdir, readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { spawn } from 'node:child_process';
 import { touchSession } from './session.js';
+import { requireApiKey } from './api-auth.js';
 
 function validSessionId(value) {
   return typeof value === 'string' && /^[0-9a-f-]{36}$/.test(value);
@@ -22,10 +23,7 @@ function runZip(output, sourceDir) {
   });
 }
 
-export async function handleZip(req, res, { storageDir }) {
-  const url = new URL(req.url || '/', 'http://localhost');
-  const sessionId = url.searchParams.get('sessionId');
-
+async function createZip(req, res, storageDir, sessionId) {
   if (!validSessionId(sessionId)) {
     res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
     res.end('Invalid session.');
@@ -60,4 +58,14 @@ export async function handleZip(req, res, { storageDir }) {
     res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
     res.end(error.message || 'ZIP unavailable.');
   }
+}
+
+export async function handleZip(req, res, { storageDir }) {
+  const url = new URL(req.url || '/', 'http://localhost');
+  await createZip(req, res, storageDir, url.searchParams.get('sessionId'));
+}
+
+export async function handleApiV1Zip(req, res, { storageDir }, jobId) {
+  if (!requireApiKey(req, res)) return;
+  await createZip(req, res, storageDir, jobId);
 }
