@@ -118,6 +118,7 @@ export async function handleProcess(req, res, { storageDir }) {
         lossless: Boolean(payload.lossless),
         stripMetadata: payload.stripMetadata !== false,
         noUpscale: payload.noUpscale !== false,
+        tinyPng: payload.tinyPng,
       });
 
       results.push({
