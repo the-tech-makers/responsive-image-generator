@@ -28,7 +28,8 @@ const CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
 
 const server = http.createServer(async (req, res) => {
   try {
-    if (req.url?.startsWith('/api/')) {
+    const pathname = (req.url || '').split('?')[0];
+    if (pathname.startsWith('/api/') || pathname === '/mcp' || pathname.startsWith('/mcp/')) {
       await handleApiRequest(req, res, { storageDir });
       return;
     }

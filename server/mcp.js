@@ -42,19 +42,157 @@ async function getJob(storageDir,jobId){if(!await readSession(storageDir,jobId))
 async function jobResults(storageDir,jobId){const manifest=await getJob(storageDir,jobId),results=[];for(const file of manifest.files||[]){let entries=[];try{entries=await readdir(join(storageDir,'sessions',jobId,'output',file.id));}catch{continue;}for(const filename of entries){const m=filename.match(/-(\d+)w\.(webp|avif|jpeg|jpg|png)$/i);if(!m)continue;const path=join(storageDir,'sessions',jobId,'output',file.id,filename);const meta=await sharp(path).metadata();results.push({filename,width:Number(m[1]),height:meta.height||0,format:m[2].toLowerCase()==='jpg'?'jpeg':m[2].toLowerCase(),fileId:file.id});}}return{manifest,results};}
 function mcpResult(value){return{content:[{type:'text',text:JSON.stringify(value,null,2)}]};}
 
-export async function handleMcpRequest(req,res,{storageDir}){
- if(!requireApiKey(req,res))return;if(req.method!=='POST'){json(res,405,{error:'MCP endpoint requires POST.'});return;}
- try{
-  const body=await new Promise((resolve,reject)=>{const chunks=[];let size=0;req.on('data',c=>{size+=c.length;if(size>35*1024*1024){reject(new Error('MCP request exceeds 35 MB.'));req.destroy();return;}chunks.push(c);});req.on('end',()=>{try{resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')||'{}'));}catch{reject(new Error('Invalid JSON request.'));}});req.on('error',reject);});
-  if(body.method==='initialize'){json(res,200,{jsonrpc:'2.0',id:body.id??null,result:{protocolVersion:body.params?.protocolVersion||'2025-06-18',capabilities:{tools:{}},serverInfo:{name:'responsive-image-tool',version:'0.1.0'}}});return;}
-  if(body.method==='tools/list'){json(res,200,{jsonrpc:'2.0',id:body.id??null,result:{tools:TOOLS}});return;}
-  if(body.method!=='tools/call'){json(res,200,{jsonrpc:'2.0',id:body.id??null,error:{code:-32601,message:`Unsupported MCP method: ${body.method}`}});return;}
-  const name=body.params?.name,args=body.params?.arguments||{};if(!TOOLS.some(t=>t.name===name)){json(res,200,{jsonrpc:'2.0',id:body.id??null,error:{code:-32602,message:`Unknown tool: ${name}`}});return;}
-  let result;
-  if(name==='process_image')result=await processMcpImage(args,storageDir);
-  else if(name==='get_image_result'||name==='download_image'){const manifest=await getJob(storageDir,args.jobId);await touchSession(storageDir,args.jobId);result={jobId:args.jobId,files:(manifest.files||[]).map(file=>({...file,downloadUrl:`/api/v1/images/${args.jobId}/files/${file.id}`}))};}
-  else{const {manifest,results}=await jobResults(storageDir,args.jobId);if(!results.length)throw new Error('No generated variants are available.');await touchSession(storageDir,args.jobId);const opts={alt:args.alt||'',sizes:args.sizes||'100vw',loading:args.loading||'lazy',decoding:args.decoding||'async',fetchpriority:args.fetchpriority||'',sourceFormats:args.sourceFormats||['avif','webp'],baseUrl:args.baseUrl||''};const html=name==='generate_img_tag'?generateImgTag(results,opts,opts.baseUrl):generatePictureTag(results,opts,opts.baseUrl);result={jobId:args.jobId,html,originalFiles:manifest.files||[]};}
-  json(res,200,{jsonrpc:'2.0',id:body.id??null,result:mcpResult(result)});
- }catch(error){json(res,200,{jsonrpc:'2.0',id:null,error:{code:-32000,message:error.message||'MCP request failed.'}});}
+const sseClients = new Map();
+
+export async function handleMcpRequest(req, res, { storageDir }) {
+  if (!requireApiKey(req, res)) return;
+
+  const url = new URL(req.url || '/', 'http://localhost');
+
+  if (req.method === 'GET') {
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+    });
+    const sessionId = randomUUID();
+    sseClients.set(sessionId, res);
+    res.write(`event: endpoint\r\ndata: /mcp?sessionId=${sessionId}\r\n\r\n`);
+
+    req.on('close', () => {
+      sseClients.delete(sessionId);
+    });
+    return;
+  }
+
+  if (req.method !== 'POST') {
+    json(res, 405, { error: 'MCP endpoint requires POST or GET (SSE).' });
+    return;
+  }
+
+  const sessionId = url.searchParams.get('sessionId');
+  const sendMcpResponse = (payload) => {
+    if (sessionId && sseClients.has(sessionId)) {
+      const sseRes = sseClients.get(sessionId);
+      sseRes.write(`event: message\r\ndata: ${JSON.stringify(payload)}\r\n\r\n`);
+      res.writeHead(202, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end('{}');
+    } else {
+      json(res, 200, payload);
+    }
+  };
+
+  try {
+    const body = await new Promise((resolve, reject) => {
+      const chunks = [];
+      let size = 0;
+      req.on('data', (c) => {
+        size += c.length;
+        if (size > 35 * 1024 * 1024) {
+          reject(new Error('MCP request exceeds 35 MB.'));
+          req.destroy();
+          return;
+        }
+        chunks.push(c);
+      });
+      req.on('end', () => {
+        try {
+          resolve(JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'));
+        } catch {
+          reject(new Error('Invalid JSON request.'));
+        }
+      });
+      req.on('error', reject);
+    });
+
+    if (body.method === 'initialize') {
+      sendMcpResponse({
+        jsonrpc: '2.0',
+        id: body.id ?? null,
+        result: {
+          protocolVersion: body.params?.protocolVersion || '2024-11-05',
+          capabilities: { tools: {} },
+          serverInfo: { name: 'responsive-image-tool', version: '0.1.0' },
+        },
+      });
+      return;
+    }
+
+    if (body.method?.startsWith('notifications/')) {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
+    if (body.method === 'ping') {
+      sendMcpResponse({ jsonrpc: '2.0', id: body.id ?? null, result: {} });
+      return;
+    }
+
+    if (body.method === 'tools/list') {
+      sendMcpResponse({ jsonrpc: '2.0', id: body.id ?? null, result: { tools: TOOLS } });
+      return;
+    }
+
+    if (body.method !== 'tools/call') {
+      sendMcpResponse({
+        jsonrpc: '2.0',
+        id: body.id ?? null,
+        error: { code: -32601, message: `Unsupported MCP method: ${body.method}` },
+      });
+      return;
+    }
+
+    const name = body.params?.name;
+    const args = body.params?.arguments || {};
+    if (!TOOLS.some((t) => t.name === name)) {
+      sendMcpResponse({
+        jsonrpc: '2.0',
+        id: body.id ?? null,
+        error: { code: -32602, message: `Unknown tool: ${name}` },
+      });
+      return;
+    }
+
+    let result;
+    if (name === 'process_image') {
+      result = await processMcpImage(args, storageDir);
+    } else if (name === 'get_image_result' || name === 'download_image') {
+      const manifest = await getJob(storageDir, args.jobId);
+      await touchSession(storageDir, args.jobId);
+      result = {
+        jobId: args.jobId,
+        files: (manifest.files || []).map((file) => ({
+          ...file,
+          downloadUrl: `/api/v1/images/${args.jobId}/files/${file.id}`,
+        })),
+      };
+    } else {
+      const { manifest, results } = await jobResults(storageDir, args.jobId);
+      if (!results.length) throw new Error('No generated variants are available.');
+      await touchSession(storageDir, args.jobId);
+      const opts = {
+        alt: args.alt || '',
+        sizes: args.sizes || '100vw',
+        loading: args.loading || 'lazy',
+        decoding: args.decoding || 'async',
+        fetchpriority: args.fetchpriority || '',
+        sourceFormats: args.sourceFormats || ['avif', 'webp'],
+        baseUrl: args.baseUrl || '',
+      };
+      const html = name === 'generate_img_tag'
+        ? generateImgTag(results, opts, opts.baseUrl)
+        : generatePictureTag(results, opts, opts.baseUrl);
+      result = { jobId: args.jobId, html, originalFiles: manifest.files || [] };
+    }
+
+    sendMcpResponse({ jsonrpc: '2.0', id: body.id ?? null, result: mcpResult(result) });
+  } catch (error) {
+    sendMcpResponse({
+      jsonrpc: '2.0',
+      id: null,
+      error: { code: -32000, message: error.message || 'MCP request failed.' },
+    });
+  }
 }
 export{TOOLS};

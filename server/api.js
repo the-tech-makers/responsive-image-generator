@@ -14,7 +14,7 @@ function sendJson(res, status, payload) {
 export async function handleApiRequest(req, res, context) {
   const url = new URL(req.url || '/', 'http://localhost');
   const path = url.pathname;
-  if (path === '/mcp') { await handleMcpRequest(req, res, context); return; }
+  if (path === '/mcp' || path.startsWith('/mcp/')) { await handleMcpRequest(req, res, context); return; }
   if (req.method === 'GET' && path === '/api/health') { sendJson(res, 200, { ok: true }); return; }
   if (path === '/api/v1') { if (req.method === 'GET') await handleApiV1Info(req, res); else sendJson(res, 405, { error: 'Method not allowed.' }); return; }
   if (req.method === 'POST' && path === '/api/v1/images/process') { await handleApiV1Process(req, res, context); return; }
