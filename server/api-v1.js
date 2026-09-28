@@ -8,6 +8,7 @@ import { createSession, touchSession, writeSessionManifest, readSession, readSes
 import { processImage } from './image-processor.js';
 import { requireApiKey } from './api-auth.js';
 import { generateImgTag, generatePictureTag } from './html-generator.js';
+import { withProcessingSlot } from './resource-limits.js';
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
 const ALLOWED = new Set(['.jpg', '.jpeg', '.png', '.webp', '.avif']);
@@ -90,7 +91,7 @@ export async function handleApiV1Process(req, res, { storageDir }) {
     if (options.tinyPng?.enabled && !['webp', 'avif'].includes(options.tinyPng.format)) throw new Error('TinyPNG format must be webp or avif.');
     await mkdir(outputDir, { recursive: true }); const fileId = randomUUID();
     await writeSessionManifest(storageDir, sessionId, [{ id: fileId, originalName, filename: basename(uploadedPath), width: metadata.width || 0, height: metadata.height || 0, size: fileBytes, format: metadata.format, sessionId }]);
-    const processed = await processImage({ sourcePath: uploadedPath, outputDir: join(outputDir, fileId), ...options });
+    const processed = await withProcessingSlot(() => processImage({ sourcePath: uploadedPath, outputDir: join(outputDir, fileId), ...options }));
     const results = resultPayload(processed, sessionId, fileId);
     let html = null;
     if (fields.htmlType) {
