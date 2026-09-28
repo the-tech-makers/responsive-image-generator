@@ -1,7 +1,7 @@
 import { handleUpload } from './upload.js';
 import { handleProcess } from './process.js';
 import { handleDownload } from './download.js';
-import { handleZip } from './zip.js';
+import { handleZip, handleApiV1Zip } from './zip.js';
 import { handleApiV1Info, handleApiV1Process, handleApiV1Result } from './api-v1.js';
 import { handleMcpRequest } from './mcp.js';
 import { requireApiKey } from './api-auth.js';
@@ -20,6 +20,8 @@ export async function handleApiRequest(req, res, context) {
   if (req.method === 'POST' && path === '/api/v1/images/process') { await handleApiV1Process(req, res, context); return; }
   const resultMatch = path.match(/^\/api\/v1\/images\/([0-9a-f-]{36})$/);
   if (req.method === 'GET' && resultMatch) { await handleApiV1Result(req, res, context, resultMatch[1]); return; }
+  const zipMatch = path.match(/^\/api\/v1\/images\/([0-9a-f-]{36})\/zip$/);
+  if (req.method === 'GET' && zipMatch) { await handleApiV1Zip(req, res, context, zipMatch[1]); return; }
   const fileMatch = path.match(/^\/api\/v1\/images\/([0-9a-f-]{36})\/files\/([a-zA-Z0-9-]{36})\/(.+)$/);
   if (req.method === 'GET' && fileMatch) { await handleApiV1File(req, res, context, fileMatch[1], fileMatch[2], decodeURIComponent(fileMatch[3])); return; }
   if (req.method === 'POST' && path === '/api/upload') { await handleUpload(req, res, context); return; }
