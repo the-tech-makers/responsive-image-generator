@@ -63,8 +63,8 @@ Status values:
 ## 33. API Security and Resource Protection
 - [x] Add API upload/body limits.
 - [x] Add validation for API processing parameters.
-- [ ] Apply controlled processing concurrency to API jobs.
-- [ ] Add rate limiting before external/public use.
+- [x] Apply controlled processing concurrency to API jobs.
+- [x] Add rate limiting before external/public use.
 - [x] Ensure TinyPNG API keys are never exposed through API/MCP.
 - [x] Add API/MCP acceptance tests — native Node MCP/API tests added and wired into GitHub Actions CI.
 
