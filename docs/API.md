@@ -16,18 +16,18 @@ Authorization: Bearer YOUR_API_KEY
 
 The key must never be exposed to frontend code or committed to Git.
 
-## V1 Direction
+## V1 API
 
 The API uses the same Sharp/Tinify processing core as the web UI. It is intended for trusted internal scripts and AI agents.
 
-Planned endpoints:
+Current endpoints:
 
 - `GET /api/v1` — API capabilities/version.
 - `POST /api/v1/images/process` — upload and process an image in one request.
-- `GET /api/v1/images/:jobId` — retrieve generated result metadata.
-- `GET /api/v1/images/:jobId/files/:fileId` — download one result.
-- `GET /api/v1/images/:jobId/download` — download results as ZIP.
-- `POST /api/v1/images/:jobId/html` — generate `<img>` or `<picture>` markup.
+- `GET /api/v1/images/:jobId` — retrieve job/result metadata.
+- `GET /api/v1/images/:jobId/files/:fileId/:filename` — download one generated result.
+
+ZIP generation already exists for the web application's legacy `GET /api/download-all?sessionId=...` route. A versioned ZIP endpoint is intentionally still pending and is not advertised as part of V1 yet.
 
 ## Processing
 
@@ -47,6 +47,99 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 Configure the resulting value as `IMAGE_TOOL_API_KEY` on the server.
 
-## MCP
+## MCP over Streamable HTTP
 
-The MCP layer will expose focused tools over the same capabilities, including `process_image`, `get_image_result`, `download_image`, `generate_img_tag` and `generate_picture_tag`. MCP must not duplicate image-processing logic.
+The MCP endpoint is:
+
+```text
+POST /mcp
+```
+
+The current implementation supports the `2025-06-18` handshake-era protocol. It uses the same Bearer API key as the REST API and is stateless at the transport layer; generated image jobs remain available through the existing 12-hour session cleanup system.
+
+Supported MCP methods:
+
+- `initialize`
+- `tools/list`
+- `tools/call`
+- `notifications/initialized`
+
+Supported tools:
+
+- `process_image` — accepts a base64 image and generates responsive variants.
+- `get_image_result` — returns generated variants and metadata for a completed job.
+- `download_image` — returns download URLs for generated variants.
+- `generate_img_tag` — generates responsive `<img>` markup from a completed job.
+- `generate_picture_tag` — generates responsive `<picture>` markup from a completed job.
+
+### Example MCP initialize request
+
+```http
+POST /mcp
+Authorization: Bearer YOUR_API_KEY
+Content-Type: application/json
+Accept: application/json, text/event-stream
+```
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "2025-06-18",
+    "capabilities": {},
+    "clientInfo": {
+      "name": "example-agent",
+      "version": "1.0.0"
+    }
+  }
+}
+```
+
+The server negotiates `2025-06-18` and returns it in both the initialize result and `MCP-Protocol-Version` response header.
+
+### Example tools/list request
+
+After initialization, clients should send the negotiated protocol version in the `MCP-Protocol-Version` header:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/list"
+}
+```
+
+### Example process_image request
+
+The image can be supplied as raw base64 or a data URL. The MCP image payload is limited to 25 MB after base64 decoding.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "tools/call",
+  "params": {
+    "name": "process_image",
+    "arguments": {
+      "image": "BASE64_IMAGE_DATA",
+      "filename": "hero.jpg",
+      "widths": [480, 768, 1024, 1280, 1440, 1920],
+      "formats": ["webp", "avif"],
+      "quality": 80,
+      "noUpscale": true,
+      "stripMetadata": true,
+      "htmlType": "picture",
+      "alt": "Example hero image",
+      "sizes": "100vw"
+    }
+  }
+}
+```
+
+The result contains a `jobId`, generated variants, actual generated dimensions, download URLs and optional HTML markup.
+
+## Verification status
+
+Repository-level MCP implementation and protocol-focused acceptance tests are present. Live verification with an actual MCP client against a running deployment remains required before marking MCP integration fully tested.
