@@ -59,10 +59,24 @@ The user selects:
 - Compression mode.
 - Quality.
 - Metadata handling.
+- Optional TinyPNG/Tinify compression.
+- TinyPNG preferred output format: WebP or AVIF.
 - HTML generation options.
 
 ### Process
 The server processes the images using Sharp.
+
+If TinyPNG compression is enabled, processing follows a second optimization stage:
+
+1. Generate the requested responsive dimensions locally with Sharp.
+2. Send each resized image selected for TinyPNG optimization to the Tinify API.
+3. Convert the optimized result to the user's preferred TinyPNG format: WebP or AVIF.
+4. Store the optimized result in the temporary session output directory.
+5. Present the TinyPNG result as the downloadable final variant.
+
+The TinyPNG API key must remain server-side and must never be exposed to the browser. TinyPNG processing is optional and must not prevent the normal local Sharp workflow from being used when the option is disabled.
+
+TinyPNG conversion is an external API operation and therefore counts against the configured Tinify account's compression allowance. The official API currently supports AVIF, WebP, JPEG and PNG compression/conversion.
 
 ### Review
 The interface displays:
@@ -158,7 +172,40 @@ The system must preserve the original aspect ratio.
 
 The system must never upscale an image when "Don't upscale" is enabled.
 
-## 7. Responsive Image Generation
+## 7. TinyPNG / Tinify Integration
+
+TinyPNG/Tinify is an optional final optimization stage.
+
+### Processing order
+
+The required order is:
+
+**Upload → Resize with Sharp → TinyPNG compression/conversion → Review → Copy/Download**
+
+TinyPNG must never replace the local responsive resizing stage in V1.
+
+### Preferred format
+
+When TinyPNG compression is enabled, the user must choose one final format:
+
+- WebP
+- AVIF
+
+Each resized image is submitted to the Tinify API and the returned optimized image is stored locally for download.
+
+### API configuration
+
+The API key is supplied through the server environment:
+
+`TINIFY_API_KEY`
+
+It must never be sent to the frontend or committed to Git.
+
+### Failure behavior
+
+A TinyPNG API failure should be reported clearly. The application must not silently present an unoptimized file as a TinyPNG-compressed result.
+
+## 8. Responsive Image Generation
 
 The application should support configurable output widths.
 
@@ -175,7 +222,7 @@ Users should also be able to specify custom widths.
 
 Widths larger than the source image should normally be skipped when "Don't upscale" is enabled.
 
-## 8. HTML Generation
+## 9. HTML Generation
 
 The application should automatically generate production-ready markup.
 
@@ -200,7 +247,7 @@ If the user does not provide alt text, the generated markup must use `alt=""`.
 
 The application must never automatically invent alt text.
 
-## 9. Temporary File Lifecycle
+## 10. Temporary File Lifecycle
 
 Uploaded and generated files are temporary.
 
@@ -224,7 +271,7 @@ A scheduled cleanup process should periodically remove expired sessions.
 
 The cleanup mechanism must not depend solely on the user closing their browser.
 
-## 10. V1 Philosophy
+## 11. V1 Philosophy
 
 V1 should remain intentionally simple.
 
@@ -251,7 +298,7 @@ Avoid premature infrastructure such as:
 
 These may be introduced only when a real requirement exists.
 
-## 11. Deployment
+## 12. Deployment
 
 The application is intended to run on shared cPanel hosting supporting:
 
@@ -268,7 +315,7 @@ The main Node startup file will be:
 
 The domain/subdomain can be connected after the application is operational.
 
-## 12. Long-Term Direction
+## 13. Long-Term Direction
 
 The architecture should remain extensible enough to support future additions such as:
 
