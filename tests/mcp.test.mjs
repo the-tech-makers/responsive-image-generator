@@ -9,6 +9,10 @@ import { handleMcpRequest } from '../server/mcp.js';
 const ONE_PIXEL_PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
 
 function request(body, { authorization = 'Bearer test-key', protocolVersion = '' } = {}) {
+  return rawRequest(JSON.stringify(body), { authorization, protocolVersion });
+}
+
+function rawRequest(payload, { authorization = 'Bearer test-key', protocolVersion = '' } = {}) {
   const req = new EventEmitter();
   req.method = 'POST';
   req.url = '/mcp';
@@ -18,8 +22,7 @@ function request(body, { authorization = 'Bearer test-key', protocolVersion = ''
   };
 
   process.nextTick(() => {
-    const payload = Buffer.from(JSON.stringify(body));
-    req.emit('data', payload);
+    req.emit('data', Buffer.from(payload));
     req.emit('end');
   });
 
@@ -96,6 +99,65 @@ test('MCP rejects an unsupported negotiated protocol header', async () => {
   const { res, payload } = await call({ jsonrpc: '2.0', id: 4, method: 'tools/list' }, { protocolVersion: '2025-11-25' });
   assert.equal(res.statusCode, 400);
   assert.equal(payload.error.code, -32600);
+});
+
+test('MCP returns a JSON-RPC error for malformed JSON without throwing', async () => {
+  const storageDir = await mkdtemp(join(tmpdir(), 'image-tool-mcp-error-'));
+  process.env.IMAGE_TOOL_API_KEY = 'test-key';
+  const res = response();
+  try {
+    await handleMcpRequest(rawRequest('{not-json'), res, { storageDir });
+    const payload = JSON.parse(res.body);
+    assert.equal(res.statusCode, 200);
+    assert.equal(payload.id, null);
+    assert.equal(payload.error.code, -32000);
+    assert.equal(payload.error.message, 'Invalid JSON request.');
+  } finally {
+    await rm(storageDir, { recursive: true, force: true });
+  }
+});
+
+test('MCP process_image defaults to no-upscale', async () => {
+  const { res, payload } = await call({
+    jsonrpc: '2.0',
+    id: 6,
+    method: 'tools/call',
+    params: {
+      name: 'process_image',
+      arguments: {
+        image: ONE_PIXEL_PNG,
+        filename: 'pixel.png',
+        widths: [1, 2],
+        formats: ['webp'],
+      },
+    },
+  }, { protocolVersion: '2025-06-18' });
+
+  assert.equal(res.statusCode, 200);
+  const result = JSON.parse(payload.result.content[0].text);
+  assert.deepEqual(result.results.map((item) => item.width), [1]);
+});
+
+test('MCP process_image allows explicit upscaling only when requested', async () => {
+  const { res, payload } = await call({
+    jsonrpc: '2.0',
+    id: 7,
+    method: 'tools/call',
+    params: {
+      name: 'process_image',
+      arguments: {
+        image: ONE_PIXEL_PNG,
+        filename: 'pixel.png',
+        widths: [1, 2],
+        formats: ['webp'],
+        noUpscale: false,
+      },
+    },
+  }, { protocolVersion: '2025-06-18' });
+
+  assert.equal(res.statusCode, 200);
+  const result = JSON.parse(payload.result.content[0].text);
+  assert.deepEqual(result.results.map((item) => item.width), [1, 2]);
 });
 
 test('MCP process_image creates a job and usable variant download URLs', async () => {
