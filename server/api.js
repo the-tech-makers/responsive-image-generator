@@ -3,6 +3,7 @@ import { handleProcess } from './process.js';
 import { handleDownload } from './download.js';
 import { handleZip } from './zip.js';
 import { handleApiV1Info, handleApiV1Process, handleApiV1Result } from './api-v1.js';
+import { handleMcpRequest } from './mcp.js';
 import { requireApiKey } from './api-auth.js';
 
 function sendJson(res, status, payload) {
@@ -13,6 +14,7 @@ function sendJson(res, status, payload) {
 export async function handleApiRequest(req, res, context) {
   const url = new URL(req.url || '/', 'http://localhost');
   const path = url.pathname;
+  if (path === '/mcp') { await handleMcpRequest(req, res, context); return; }
   if (req.method === 'GET' && path === '/api/health') { sendJson(res, 200, { ok: true }); return; }
   if (path === '/api/v1') { if (req.method === 'GET') await handleApiV1Info(req, res); else sendJson(res, 405, { error: 'Method not allowed.' }); return; }
   if (req.method === 'POST' && path === '/api/v1/images/process') { await handleApiV1Process(req, res, context); return; }
@@ -30,12 +32,12 @@ export async function handleApiRequest(req, res, context) {
 async function handleApiV1File(req, res, { storageDir }, jobId, imageId, filename) {
   if (!requireApiKey(req, res)) return;
   if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,180}$/.test(filename) || filename.includes('..')) { sendJson(res, 400, { error: 'Invalid filename.' }); return; }
-  const { readFile, stat } = await import('node:fs/promises');
+  const { stat } = await import('node:fs/promises');
   const { join } = await import('node:path');
   const { createReadStream } = await import('node:fs');
   const { touchSession, readSessionManifest } = await import('./session.js');
-  if (!await readSessionManifest(storageDir, jobId)) { sendJson(res, 404, { error: 'Job not found or expired.' }); return; }
   const manifest = await readSessionManifest(storageDir, jobId);
+  if (!manifest) { sendJson(res, 404, { error: 'Job not found or expired.' }); return; }
   if (!manifest?.files?.some((file) => file.id === imageId)) { sendJson(res, 404, { error: 'File not found.' }); return; }
   const filePath = join(storageDir, 'sessions', jobId, 'output', imageId, filename);
   try {
