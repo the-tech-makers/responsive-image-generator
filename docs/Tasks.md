@@ -2,10 +2,9 @@
 
 Tasks are ordered by dependency and priority.
 
-> **Current verification status (2026-09-28):** TinyPNG/Tinify code has been implemented and reviewed in the repository. API/MCP expansion is now underway. Live API/UAT verification remains pending until deployment testing is performed.
+> **Current verification status (2026-09-28):** API/MCP implementation is underway. Repository-level implementation has been added; live deployment and protocol/client verification remain pending.
 
 Status values:
-
 - [ ] Not started
 - [~] In progress / awaiting verification
 - [x] Completed and tested
@@ -49,14 +48,15 @@ Status values:
 - [~] Verify generated HTML against live API output.
 
 ## 32. MCP Interface
-- [ ] Define MCP tools around the existing API/core capabilities.
-- [ ] Add `process_image` tool.
-- [ ] Add `get_image_result` tool.
-- [ ] Add `download_image` tool/resource.
-- [ ] Add `generate_img_tag` tool.
-- [ ] Add `generate_picture_tag` tool.
-- [ ] Authenticate MCP requests using the same server-side API-key mechanism.
-- [ ] Ensure MCP does not duplicate processing logic.
+- [~] Define MCP tools around the existing API/core capabilities — tool schemas added.
+- [~] Add `process_image` tool — schema added; binary MCP transport still pending.
+- [~] Add `get_image_result` tool — implemented through the existing result API.
+- [~] Add `download_image` tool/resource — implemented as generated download URLs.
+- [ ] Add `generate_img_tag` tool with full job-backed implementation.
+- [ ] Add `generate_picture_tag` tool with full job-backed implementation.
+- [x] Authenticate MCP requests using the same server-side API-key mechanism.
+- [x] Ensure MCP does not duplicate image-processing logic.
+- [~] Expose MCP endpoint at `/mcp` — repository implementation added; live protocol verification pending.
 
 ## 33. API Security and Resource Protection
 - [x] Add API upload/body limits.
@@ -71,5 +71,5 @@ Status values:
 - [x] Document processing request schema.
 - [~] Document result schema.
 - [x] Document HTML generation options.
-- [ ] Document MCP tools and parameters.
+- [~] Document MCP tools and parameters.
 - [ ] Add API usage examples for AI agents.
