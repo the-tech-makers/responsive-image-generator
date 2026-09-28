@@ -1,6 +1,6 @@
 # Responsive Image Generator
 
-A responsive-image processing service and web application from The Tech Makers. It can generate responsive image variants, convert formats, optimize output, and expose the same processing capabilities through a versioned REST API and MCP server for AI agents and developer tooling.
+A responsive-image processing service and web application from **The Tech Makers**. It can generate responsive image variants, convert formats, optimize output, and expose the same processing capabilities through a versioned REST API and MCP server for AI agents and developer tooling.
 
 ## What it does
 
@@ -14,6 +14,17 @@ A responsive-image processing service and web application from The Tech Makers. 
 - Expose image processing and HTML-generation tools through MCP.
 - Apply request rate limiting and controlled processing concurrency.
 - Automatically clean up expired processing sessions.
+
+## Author & Customization
+
+**Responsive Image Generator** is developed and maintained by **Sanjay Goswami / The Tech Makers**.
+
+The project is designed to be self-hosted and used as an open-source image-processing utility. If you need custom functionality, deployment assistance, integration with an existing application, API/MCP integration, or additional image-processing features, you can contact The Tech Makers for customization and development services.
+
+- **Website:** https://www.thetechmakers.com
+- **Email:** info@thetechmakers.com
+- **GitHub:** https://github.com/sanjaygswmi
+- **LinkedIn:** https://www.linkedin.com/in/goswamisanjay
 
 ### Upscaling policy
 
@@ -237,3 +248,9 @@ Before production deployment:
 The current version is intentionally focused on responsive image processing and developer/AI-agent integration. It does not require a database, project presets, or cloud object storage.
 
 The API key, TinyPNG key, processing limits, and other server configuration remain server-side concerns.
+
+## License
+
+Copyright © 2026 Sanjay Goswami / The Tech Makers.
+
+This project is licensed under the **MIT License**. See [`LICENSE`](LICENSE) for the full license text.
