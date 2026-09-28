@@ -26,6 +26,7 @@ export default function App() {
   const [lossless, setLossless] = useState(false);
   const [stripMetadata, setStripMetadata] = useState(true);
   const [noUpscale, setNoUpscale] = useState(true);
+  const [tinyPng, setTinyPng] = useState({ enabled: false, format: 'webp' });
   const [customWidth, setCustomWidth] = useState('');
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -77,7 +78,7 @@ export default function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sessionId, files, widths, formats, quality, lossless, stripMetadata, noUpscale,
+          sessionId, files, widths, formats, quality, lossless, stripMetadata, noUpscale, tinyPng,
         }),
       });
       const data = await response.json();
@@ -248,24 +249,53 @@ export default function App() {
                 <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Formats</label>
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   {FORMATS.map(([value, label]) => (
-                    <label key={value} className="flex cursor-pointer items-center gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm">
-                      <input type="checkbox" checked={formats.includes(value)} onChange={() => toggleFormat(value)} />
+                    <label key={value} className={`flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm ${tinyPng.enabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
+                      <input type="checkbox" checked={formats.includes(value)} onChange={() => toggleFormat(value)} disabled={tinyPng.enabled} />
                       {label}
                     </label>
                   ))}
                 </div>
               </div>
 
+              <div className="mt-5 rounded-md border border-slate-200 bg-slate-50 p-4">
+                <label className="flex cursor-pointer items-start gap-3 text-sm font-medium text-slate-800">
+                  <input
+                    type="checkbox"
+                    checked={tinyPng.enabled}
+                    onChange={(event) => setTinyPng((current) => ({ ...current, enabled: event.target.checked }))}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    Compress with TinyPNG
+                    <span className="mt-1 block text-xs font-normal text-slate-500">Resize locally first, then optimize the resized images with TinyPNG.</span>
+                  </span>
+                </label>
+
+                {tinyPng.enabled && (
+                  <label className="mt-4 block text-sm">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Preferred format</span>
+                    <select
+                      value={tinyPng.format}
+                      onChange={(event) => setTinyPng((current) => ({ ...current, format: event.target.value }))}
+                      className="mt-2 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                    >
+                      <option value="webp">WebP</option>
+                      <option value="avif">AVIF</option>
+                    </select>
+                  </label>
+                )}
+              </div>
+
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={lossless} onChange={(event) => setLossless(event.target.checked)} /> Lossless</label>
+                <label className={`flex items-center gap-2 text-sm ${tinyPng.enabled ? 'opacity-50' : ''}`}><input type="checkbox" checked={lossless} onChange={(event) => setLossless(event.target.checked)} disabled={tinyPng.enabled} /> Lossless</label>
                 <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={stripMetadata} onChange={(event) => setStripMetadata(event.target.checked)} /> Strip metadata</label>
                 <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={noUpscale} onChange={(event) => setNoUpscale(event.target.checked)} /> Don't upscale</label>
               </div>
 
               {!lossless && (
-                <label className="mt-5 block text-sm">
+                <label className={`mt-5 block text-sm ${tinyPng.enabled ? 'opacity-50' : ''}`}>
                   <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Quality: {quality}</span>
-                  <input className="mt-2 w-full accent-blue-600" type="range" min="1" max="100" value={quality} onChange={(event) => setQuality(Number(event.target.value))} />
+                  <input className="mt-2 w-full accent-blue-600" type="range" min="1" max="100" value={quality} onChange={(event) => setQuality(Number(event.target.value))} disabled={tinyPng.enabled} />
                 </label>
               )}
 
