@@ -1,7 +1,6 @@
-import { mkdir, stat } from 'node:fs/promises';
+import { mkdir, stat, writeFile } from 'node:fs/promises';
 import { basename, extname, join } from 'node:path';
 import sharp from 'sharp';
-import { writeFile } from 'node:fs/promises';
 import { compressWithTinyPng } from './tinypng.js';
 
 const FORMAT_CONFIG = {
