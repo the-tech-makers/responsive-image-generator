@@ -6,6 +6,7 @@ import { processImage } from './image-processor.js';
 import { createSession, touchSession, writeSessionManifest, readSession, readSessionManifest } from './session.js';
 import { requireApiKey } from './api-auth.js';
 import { generateImgTag, generatePictureTag } from './html-generator.js';
+import { withProcessingSlot } from './resource-limits.js';
 
 const MCP_PROTOCOL_VERSION = '2025-06-18';
 const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
@@ -319,7 +320,7 @@ export async function handleMcpRequest(req, res, { storageDir }) {
     let result;
 
     if (name === 'process_image') {
-      result = await processMcpImage(args, storageDir);
+      result = await withProcessingSlot(() => processMcpImage(args, storageDir));
     } else if (name === 'get_image_result' || name === 'download_image') {
       const { manifest, results } = await jobResults(storageDir, args.jobId);
       if (!results.length) throw new Error('No generated variants are available.');
