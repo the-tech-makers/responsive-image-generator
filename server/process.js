@@ -58,10 +58,22 @@ export async function handleProcess(req, res, { storageDir }) {
       return;
     }
 
-    const safeFormats = formats.filter((format) => ['webp', 'avif', 'jpeg', 'png'].includes(format));
+    const safeFormats = Array.isArray(formats) ? formats.filter((format) => ['webp', 'avif', 'jpeg', 'png'].includes(format)) : [];
     const safeWidths = normalizeWidths(payload.widths);
+    const tinyPngEnabled = Boolean(payload.tinyPng?.enabled);
+    const tinyPngFormat = payload.tinyPng?.format;
 
-    if (!safeFormats.length || !safeWidths.length) {
+    if (!safeWidths.length) {
+      send(res, 400, { error: 'Select at least one valid width.' });
+      return;
+    }
+
+    if (tinyPngEnabled && !['webp', 'avif'].includes(tinyPngFormat)) {
+      send(res, 400, { error: 'Select WebP or AVIF as the TinyPNG preferred format.' });
+      return;
+    }
+
+    if (!tinyPngEnabled && !safeFormats.length) {
       send(res, 400, { error: 'Select at least one valid width and output format.' });
       return;
     }
