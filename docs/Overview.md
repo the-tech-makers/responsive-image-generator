@@ -1,8 +1,8 @@
-# Responsive Image Tool — Project Overview
+# Responsive Image Generator — Project Overview
 
 ## 1. Purpose
 
-The Responsive Image Tool is an internal web application for The Tech Makers team.
+The Responsive Image Generator is an internal web application for The Tech Makers team.
 
 Its primary purpose is to reduce the repetitive work involved in preparing website images for production.
 
@@ -31,18 +31,9 @@ The primary users are:
 - Designers/developers preparing website assets.
 - Internal team members who need production-ready responsive images.
 
-The application is **not intended to be a public SaaS product**.
+The application is currently intended as an internal developer utility rather than a public SaaS product.
 
-It does not need:
-
-- Public user registration.
-- Billing.
-- Subscription management.
-- Customer accounts.
-- Public APIs.
-- Multi-tenant project management.
-
-Authentication may be added in the future if the application becomes accessible outside the trusted internal environment.
+Machine access is available through an authenticated REST API and MCP endpoint for trusted scripts and AI agents.
 
 ## 3. Core Workflow
 
@@ -75,8 +66,6 @@ If TinyPNG compression is enabled, processing follows a second optimization stag
 5. Present the TinyPNG result as the downloadable final variant.
 
 The TinyPNG API key must remain server-side and must never be exposed to the browser. TinyPNG processing is optional and must not prevent the normal local Sharp workflow from being used when the option is disabled.
-
-TinyPNG conversion is an external API operation and therefore counts against the configured Tinify account's compression allowance. The official API currently supports AVIF, WebP, JPEG and PNG compression/conversion.
 
 ### Review
 The interface displays:
@@ -115,7 +104,7 @@ The user can:
 
 Temporary filesystem storage only.
 
-No database is required for V1.
+No database is required.
 
 ## 5. Application Architecture
 
@@ -145,6 +134,8 @@ Responsible for:
 - ZIP generation.
 - Temporary storage.
 - Cleanup.
+- Authenticated REST API access.
+- MCP request handling.
 
 The frontend must not perform server-side image processing.
 
@@ -159,18 +150,16 @@ The application should support:
 - WebP input.
 - AVIF input.
 
-Output formats should initially include:
+Output formats include:
 
 - WebP.
 - AVIF.
 - JPEG.
 - PNG.
 
-Additional formats may be considered later.
-
 The system must preserve the original aspect ratio.
 
-The system must never upscale an image when "Don't upscale" is enabled.
+The system must not upscale an image by default. `noUpscale` defaults to `true` for API and MCP processing. Larger widths may be generated only when upscaling is explicitly requested.
 
 ## 7. TinyPNG / Tinify Integration
 
@@ -182,7 +171,7 @@ The required order is:
 
 **Upload → Resize with Sharp → TinyPNG compression/conversion → Review → Copy/Download**
 
-TinyPNG must never replace the local responsive resizing stage in V1.
+TinyPNG must never replace the local responsive resizing stage.
 
 ### Preferred format
 
@@ -207,7 +196,7 @@ A TinyPNG API failure should be reported clearly. The application must not silen
 
 ## 8. Responsive Image Generation
 
-The application should support configurable output widths.
+The application supports configurable output widths.
 
 Initial suggested widths:
 
@@ -218,13 +207,13 @@ Initial suggested widths:
 - 1440px
 - 1920px
 
-Users should also be able to specify custom widths.
+Users can also specify custom widths.
 
-Widths larger than the source image should normally be skipped when "Don't upscale" is enabled.
+Widths larger than the source image are skipped when `noUpscale` is enabled.
 
 ## 9. HTML Generation
 
-The application should automatically generate production-ready markup.
+The application automatically generates production-ready markup.
 
 Supported output:
 
@@ -271,59 +260,38 @@ A scheduled cleanup process should periodically remove expired sessions.
 
 The cleanup mechanism must not depend solely on the user closing their browser.
 
-## 11. V1 Philosophy
+## 11. API and AI-Agent Integration
 
-V1 should remain intentionally simple.
+The Responsive Image Generator exposes the same processing engine through:
 
-The application should prioritize:
+- Authenticated REST API under `/api/v1`.
+- MCP endpoint at `/mcp`.
 
-- Speed.
-- Reliability.
-- Clear UX.
-- Small codebase.
-- Easy deployment.
-- Easy maintenance.
-- Predictable image output.
+AI agents must preserve `noUpscale: true` unless the user explicitly requests enlargement/upscaling. A larger responsive breakpoint is not, by itself, permission to upscale.
 
-Avoid premature infrastructure such as:
-
-- Databases.
-- Redis.
-- Queues.
-- Docker.
-- Microservices.
-- Cloud object storage.
-- User accounts.
-- Project management systems.
-
-These may be introduced only when a real requirement exists.
+API and MCP traffic is rate-limited, and image processing is bounded by a configurable concurrency limit.
 
 ## 12. Deployment
 
-The application is intended to run on shared cPanel hosting supporting:
-
-- Node.js 20.
-- Sharp.
-- Approximately 6 GB RAM.
-- Approximately 6 CPU cores.
+The application is intended to run on Node.js 20 hosting, including supported cPanel Node.js environments.
 
 The application should use the port supplied by the hosting environment.
 
-The main Node startup file will be:
+The main Node startup file is:
 
 `app.js`
 
-The domain/subdomain can be connected after the application is operational.
+The production environment must configure the API key server-side. If ZIP downloads are enabled, the host must provide the `zip` command.
 
 ## 13. Long-Term Direction
 
 The architecture should remain extensible enough to support future additions such as:
 
-- Authentication.
+- Authentication expansion.
 - Saved presets.
 - Direct project output.
 - More image formats.
 - Additional optimization options.
 - Advanced responsive-image strategies.
 
-However, these features are outside V1 and must not complicate the initial implementation.
+The existing API/MCP architecture should remain stable as new capabilities are added.
