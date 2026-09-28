@@ -100,6 +100,23 @@ Status values:
 - [x] Record output file sizes.
 - [x] Calculate size reduction.
 
+### 9.1 TinyPNG / Tinify Integration
+
+- [ ] Add TinyPNG/Tinify API configuration via `TINIFY_API_KEY`.
+- [ ] Keep the API key server-side and out of frontend responses.
+- [ ] Add optional TinyPNG compression setting.
+- [ ] Add preferred TinyPNG output format selector: WebP / AVIF.
+- [ ] Ensure TinyPNG processing occurs only after Sharp responsive resizing.
+- [ ] Send each required resized variant to Tinify without duplicate requests.
+- [ ] Save Tinify-optimized results in the session output directory.
+- [ ] Record TinyPNG output dimensions and file sizes.
+- [ ] Calculate TinyPNG size reduction against the resized source variant.
+- [ ] Handle Tinify account/API-limit errors clearly.
+- [ ] Handle Tinify client, server, and connection errors clearly.
+- [ ] Do not present failed Tinify results as successfully optimized.
+- [ ] Verify transparency behavior for WebP and AVIF outputs.
+- [ ] Verify TinyPNG compression count against expected API operations.
+
 ## 10. Metadata
 
 - [x] Implement metadata stripping.
@@ -117,6 +134,9 @@ Status values:
 - [x] Build quality control.
 - [x] Build metadata option.
 - [x] Build no-upscale option.
+- [ ] Build TinyPNG compression toggle.
+- [ ] Build TinyPNG preferred-format selector.
+- [ ] Explain that TinyPNG runs after resizing.
 
 ## 12. Processing Action
 
@@ -125,6 +145,7 @@ Status values:
 - [x] Display processing state.
 - [ ] Display overall progress.
 - [ ] Display current image.
+- [ ] Display TinyPNG processing state when enabled.
 - [x] Handle processing errors.
 - [x] Allow successful results to remain visible.
 
@@ -254,6 +275,11 @@ Status values:
 - [~] Test multiple output widths.
 - [~] Test multiple output formats.
 - [~] Test batch processing.
+- [ ] Test TinyPNG-enabled processing.
+- [ ] Test TinyPNG WebP output.
+- [ ] Test TinyPNG AVIF output.
+- [ ] Test TinyPNG API failure handling.
+- [ ] Verify no duplicate Tinify requests for the same resized variant.
 - [~] Confirm controlled CPU/memory usage.
 
 ## 26. Deployment
