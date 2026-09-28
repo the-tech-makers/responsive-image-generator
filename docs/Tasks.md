@@ -71,6 +71,7 @@ Status values:
 ## 34. API/MCP Documentation
 - [x] Document API authentication.
 - [x] Document processing request schema.
+- [x] Document default no-upscaling behavior and AI-agent upscaling policy.
 - [x] Document result schema.
 - [x] Document HTML generation options.
 - [x] Document MCP tools and parameters.
